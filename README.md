@@ -42,8 +42,8 @@ npm start
 app/
 ├── _layout.js          # Root layout
 ├── index.js            # Homepage
-├── upload.js           # Upload page
-├── orders.js           # Orders page
+├── add.js              # Upload page (route: /add)
+├── wishlists.js        # Wishlists / Orders page (route: /wishlists)
 └── category/
     └── [name].js       # Category pages
 

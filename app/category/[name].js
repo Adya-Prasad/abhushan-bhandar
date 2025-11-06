@@ -2,24 +2,24 @@ import { useFocusEffect } from "@react-navigation/native";
 import { router, useLocalSearchParams } from "expo-router";
 import { useCallback, useState } from "react";
 import {
-  Alert,
-  Dimensions,
-  Image,
-  Modal,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    Alert,
+    Dimensions,
+    Image,
+    Modal,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from "react-native";
 import Svg, { Path } from "react-native-svg";
 import { Colors, FontSizes, Spacing } from "../../constants/theme";
 import {
-  deleteJewelleryItem,
-  getJewelleryByCategory,
-  updateJewelleryItem,
+    deleteJewelleryItem,
+    getJewelleryByCategory,
+    updateJewelleryItem,
 } from "../../utils/database";
 
 const { width } = Dimensions.get("window");
@@ -202,6 +202,9 @@ export default function CategoryScreen() {
                   />
                   <View style={styles.cardContent}>
                     <Text style={styles.cardTitle}>{item.name}</Text>
+                    {item.imgId && (
+                      <Text style={styles.cardImgId}>ID: {item.imgId}</Text>
+                    )}
                     {item.metal && (
                       <Text style={styles.cardDetail}>Metal: {item.metal}</Text>
                     )}
@@ -493,6 +496,12 @@ const styles = StyleSheet.create({
     color: Colors.text,
     marginBottom: Spacing.xs,
     alignItems: "center",
+  },
+  cardImgId: {
+    fontSize: FontSizes.small,
+    color: Colors.primary,
+    fontWeight: "bold",
+    marginBottom: 4,
   },
   cardDetail: {
     fontSize: FontSizes.small,

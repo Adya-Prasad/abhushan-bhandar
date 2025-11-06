@@ -1,5 +1,7 @@
+import { useFocusEffect } from "@react-navigation/native";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
+import { useCallback, useState } from "react";
 import {
   Image,
   Pressable,
@@ -9,10 +11,24 @@ import {
   View,
 } from "react-native";
 import Svg, { Path } from "react-native-svg";
-import { CATEGORIES } from "../constants/categories";
 import { Colors, Spacing } from "../constants/theme";
+import { getAllCategories } from "../utils/database";
 
 export default function HomeScreen() {
+  const [categories, setCategories] = useState([]);
+
+  const loadCategories = useCallback(async () => {
+    const allCategories = await getAllCategories();
+    setCategories(allCategories);
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadCategories();
+    }, [loadCategories])
+  );
+
+
   return (
     <View style={styles.container}>
       <ScrollView
@@ -56,22 +72,26 @@ export default function HomeScreen() {
           </View>
         </View>
 
-        <Text style={styles.title}>Explore Our Elegent Collection</Text>
+  <Text style={styles.title}>Explore Our Elegant Collection</Text>
 
         {/* Categories Grid */}
         <View style={styles.jewelleryCategories}>
-          {CATEGORIES.map((category, index) => (
+          {categories.map((category, index) => (
             <Pressable
               key={index}
-              style={({ hovered }) => [
+              style={({ pressed }) => [
                 styles.categoryItem,
-                hovered && styles.categoryItemHovered,
+                pressed && styles.categoryItemHovered,
               ]}
               onPress={() =>
                 router.push(`/category/${category.name.toLowerCase()}`)
               }
             >
-              <Image source={category.icon} style={styles.categoryImage} />
+              <Image 
+                source={{ uri: category.iconSource }}
+                style={styles.categoryImage}
+                resizeMode="cover"
+              />
               <Text style={styles.categoryTitle}>{category.name}</Text>
             </Pressable>
           ))}
@@ -158,7 +178,8 @@ const styles = StyleSheet.create({
   jewelleryCategories: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 30,
+    // gap is a web-only/CSS property; use item margins for spacing on native
+    justifyContent: "flex-start",
   },
   categoryItem: {
     minWidth: 140,
@@ -168,7 +189,8 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     overflow: "hidden",
     elevation: 2,
-    transition: "all 0.3s ease",
+    // remove web-only transition property for native compatibility
+    margin: 12,
   },
   categoryItemHovered: {
     elevation: 12,
@@ -180,8 +202,7 @@ const styles = StyleSheet.create({
   },
   categoryImage: {
     width: "100%",
-    resizeMode: "cover",
-    paddingHorizontal: 14,    
+    height: 120,
   },
   categoryTitle: {
     fontSize: 25,
@@ -195,6 +216,7 @@ const styles = StyleSheet.create({
     marginVertical: 12,
     borderRadius: 5,
   },
+
   footer: {
     paddingVertical: 30,
     alignItems: "center",

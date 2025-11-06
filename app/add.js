@@ -1,6 +1,7 @@
+import { useFocusEffect } from "@react-navigation/native";
 import * as ImagePicker from "expo-image-picker";
 import { router } from "expo-router";
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import {
   Alert,
   Image,
@@ -13,12 +14,17 @@ import {
   View,
 } from "react-native";
 import Svg, { Path } from "react-native-svg";
-import { CATEGORIES } from "../constants/categories";
 import { Colors, FontSizes, Spacing } from "../constants/theme";
-import { saveCategory, saveJewelleryItem } from "../utils/database";
+import {
+  deleteCategory,
+  getAllCategories,
+  saveCategory,
+  saveJewelleryItem,
+} from "../utils/database";
 
 export default function AddScreen() {
   const [activeTab, setActiveTab] = useState("jewellery");
+  const [categories, setCategories] = useState([]);
 
   // Category form state
   const [categoryName, setCategoryName] = useState("");
@@ -27,11 +33,22 @@ export default function AddScreen() {
   // Jewellery form state
   const [jewelleryImage, setJewelleryImage] = useState(null);
   const [jewelleryName, setJewelleryName] = useState("");
-  const [selectedCategories, setSelectedCategories] = useState([]);
+  const [selectedCategories, setSelectedCategories] = useState(["All"]);
   const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
   const [metal, setMetal] = useState("");
   const [weight, setWeight] = useState("");
   const [carat, setCarat] = useState("");
+
+  const loadCategories = useCallback(async () => {
+    const allCategories = await getAllCategories();
+    setCategories(allCategories);
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadCategories();
+    }, [loadCategories])
+  );
 
   const pickImage = async (type) => {
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -63,19 +80,41 @@ export default function AddScreen() {
     }
 
     try {
+      // Check if category name already exists
+      const allCategories = await getAllCategories();
+      const categoryExists = allCategories.some(
+        cat => cat.name.toLowerCase() === categoryName.trim().toLowerCase()
+      );
+
+      if (categoryExists) {
+        Alert.alert("Error", "A category with this name already exists");
+        return;
+      }
+
+      // Format category name properly (capitalize first letter)
+      const formattedName = categoryName.trim();
+      const finalName = formattedName.charAt(0).toUpperCase() + formattedName.slice(1);
+
       await saveCategory({
-        name: categoryName,
-        icon: categoryIcon,
+        name: finalName,
+        icon: categoryIcon, // This is already base64 from pickImage
       });
+
       Alert.alert("Success", "Category created successfully!");
       setCategoryName("");
       setCategoryIcon(null);
+      loadCategories(); // Refresh categories list
     } catch (_error) {
       Alert.alert("Error", "Failed to create category");
     }
   };
 
   const toggleCategory = (categoryName) => {
+    // "All" category cannot be unchecked
+    if (categoryName === "All") {
+      return;
+    }
+
     setSelectedCategories((prev) =>
       prev.includes(categoryName)
         ? prev.filter((c) => c !== categoryName)
@@ -109,7 +148,7 @@ export default function AddScreen() {
       Alert.alert("Success", "Jewellery uploaded successfully!");
       setJewelleryImage(null);
       setJewelleryName("");
-      setSelectedCategories([]);
+      setSelectedCategories(["All"]); // Reset to default with "All"
       setMetal("");
       setWeight("");
       setCarat("");
@@ -229,6 +268,78 @@ export default function AddScreen() {
             >
               <Text style={styles.submitButtonText}>Create Category</Text>
             </TouchableOpacity>
+
+            {/* Category List */}
+            <View style={styles.categoryListContainer}>
+              <Text style={styles.categoryListTitle}>Existing Categories</Text>
+              {categories.length > 1 ? ( // More than just Archive
+                <ScrollView style={styles.categoryList}>
+                  {categories
+                    .filter(cat => !cat.isDefault) // Don't show Archive in the list
+                    .map((category, index) => (
+                      <View key={category.id || index} style={styles.categoryListItem}>
+                        <View style={styles.categoryListItemContent}>
+                          <Image 
+                            source={{ uri: category.iconSource }}
+                            style={styles.categoryListItemIcon}
+                          />
+                          <Text style={styles.categoryListItemText}>
+                            {category.name}
+                          </Text>
+                        </View>
+                        <TouchableOpacity
+                          style={styles.categoryDeleteButton}
+                          onPress={() => {
+                            Alert.alert(
+                              "Delete Category",
+                              `Are you sure you want to delete "${category.name}"?\n\nAll items will remain in Archive.`,
+                              [
+                                { text: "Cancel", style: "cancel" },
+                                {
+                                  text: "Delete",
+                                  style: "destructive",
+                                  onPress: async () => {
+                                    try {
+                                      await deleteCategory(category.id);
+                                      Alert.alert(
+                                        "Success",
+                                        "Category deleted successfully"
+                                      );
+                                      await loadCategories(); // Refresh the list
+                                    } catch (error) {
+                                      console.error("Delete error:", error);
+                                      Alert.alert(
+                                        "Error",
+                                        "Failed to delete category. Please try again."
+                                      );
+                                    }
+                                  },
+                                },
+                              ],
+                              { cancelable: true }
+                            );
+                          }}
+                        >
+                          <Svg
+                            width={20}
+                            height={20}
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="#e74c3c"
+                            strokeWidth="2"
+                          >
+                            <Path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                          </Svg>
+                        </TouchableOpacity>
+                      </View>
+                    ))}
+                </ScrollView>
+              ) : (
+                <Text style={styles.noCategoriesText}>
+                  No custom categories yet. Create one above!
+                </Text>
+              )}
+            </View>
           </View>
         ) : (
           <View style={styles.formSection}>
@@ -303,9 +414,7 @@ export default function AddScreen() {
                 >
                   <Path
                     d={
-                      showCategoryDropdown
-                        ? "M18 15l-6-6-6 6"
-                        : "M6 9l6 6 6-6"
+                      showCategoryDropdown ? "M18 15l-6-6-6 6" : "M6 9l6 6 6-6"
                     }
                   />
                 </Svg>
@@ -332,14 +441,28 @@ export default function AddScreen() {
                 </View>
               )}
               {showCategoryDropdown && (
-                <View style={styles.dropdownList}>
-                  {CATEGORIES.map((cat, index) => (
+                <ScrollView
+                  style={styles.dropdownList}
+                  nestedScrollEnabled={true}
+                >
+                  {categories.map((cat, index) => (
                     <Pressable
                       key={index}
-                      style={styles.dropdownItem}
+                      style={[
+                        styles.dropdownItem,
+                        cat.name === "All" && styles.dropdownItemDisabled,
+                      ]}
                       onPress={() => toggleCategory(cat.name)}
                     >
-                      <Text style={styles.dropdownItemText}>{cat.name}</Text>
+                      <Text
+                        style={[
+                          styles.dropdownItemText,
+                          cat.name === "All" && styles.dropdownItemTextDisabled,
+                        ]}
+                      >
+                        {cat.name}
+                        {cat.name === "All" && " (Always selected)"}
+                      </Text>
                       {selectedCategories.includes(cat.name) && (
                         <Svg
                           width={20}
@@ -354,7 +477,7 @@ export default function AddScreen() {
                       )}
                     </Pressable>
                   ))}
-                </View>
+                </ScrollView>
               )}
             </View>
 
@@ -556,6 +679,7 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: Colors.secondary,
     maxHeight: 200,
+    marginBottom: Spacing.md,
   },
   dropdownItem: {
     flexDirection: "row",
@@ -571,6 +695,13 @@ const styles = StyleSheet.create({
     color: Colors.text,
     fontWeight: "600",
   },
+  dropdownItemDisabled: {
+    backgroundColor: Colors.background,
+  },
+  dropdownItemTextDisabled: {
+    color: Colors.border,
+    fontStyle: "italic",
+  },
   submitButton: {
     backgroundColor: Colors.primary,
     paddingVertical: Spacing.md,
@@ -583,5 +714,55 @@ const styles = StyleSheet.create({
     color: Colors.white,
     fontSize: FontSizes.large,
     fontWeight: "bold",
+  },
+  categoryListContainer: {
+    marginTop: Spacing.xl,
+  },
+  categoryListTitle: {
+    fontSize: FontSizes.large,
+    fontWeight: "600",
+    color: Colors.text,
+    marginBottom: Spacing.md,
+  },
+  categoryList: {
+    maxHeight: 300,
+  },
+  categoryListItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingVertical: Spacing.md,
+    paddingHorizontal: Spacing.md,
+    backgroundColor: Colors.white,
+    borderRadius: 8,
+    marginBottom: Spacing.sm,
+    borderWidth: 1,
+    borderColor: Colors.secondary,
+  },
+  categoryListItemContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    flex: 1,
+  },
+  categoryListItemIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    marginRight: Spacing.md,
+  },
+  categoryListItemText: {
+    fontSize: FontSizes.medium,
+    color: Colors.text,
+    fontWeight: "600",
+  },
+  categoryDeleteButton: {
+    padding: 8,
+  },
+  noCategoriesText: {
+    fontSize: FontSizes.medium,
+    color: Colors.border,
+    textAlign: "center",
+    marginTop: Spacing.lg,
+    fontStyle: "italic",
   },
 });

@@ -4,11 +4,11 @@ import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import Svg, { Path } from "react-native-svg";
 import { Colors, FontSizes, Spacing } from "../constants/theme";
 
-export default function OrdersScreen() {
+export default function WishlistsScreen() {
   return (
     <View style={styles.container}>
       <LinearGradient 
-        colors={[Colors.white, Colors.PrimaryDark]} 
+        colors={[Colors.white, Colors.primary]} 
         start={{ x: 0, y: 0 }} 
         end={{ x: 1, y: 1 }} 
         style={styles.gradient}
