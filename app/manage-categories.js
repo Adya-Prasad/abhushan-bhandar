@@ -1,0 +1,388 @@
+import { useFocusEffect } from "@react-navigation/native";
+import { router } from "expo-router";
+import { useCallback, useState } from "react";
+import {
+  Alert,
+  Image,
+  Modal,
+  Pressable,
+  ScrollView,
+  Text,
+  TouchableOpacity,
+  View
+} from "react-native";
+import Svg, { Path } from "react-native-svg";
+import { Colors } from "../constants/theme";
+import { deleteCategory, getAllCategories, getJewelleryByCategory } from "../utils/database";
+
+export default function ManageCategoriesScreen() {
+// ...existing code...
+  const [categories, setCategories] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [deleteModalVisible, setDeleteModalVisible] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [deleteError, setDeleteError] = useState("");
+
+  const loadCategories = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      const allCategories = await getAllCategories();
+      const categoriesWithCounts = await Promise.all(
+        allCategories.map(async (category) => {
+          const items = await getJewelleryByCategory(category.name);
+          return {
+            ...category,
+            itemCount: items.length
+          };
+        })
+      );
+      setCategories(categoriesWithCounts);
+    } catch (_error) {
+      console.error('Error loading categories:', _error);
+      Alert.alert('Error', 'Failed to load categories');
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadCategories();
+    }, [loadCategories])
+  );
+
+  const openDeleteModal = (category) => {
+    if (category.isDefault) {
+      Alert.alert('Error', 'Cannot delete the Archive category');
+      return;
+    }
+    setSelectedCategory(category);
+    setDeleteModalVisible(true);
+    setDeleteError("");
+  };
+
+  const closeDeleteModal = () => {
+    setDeleteModalVisible(false);
+    setSelectedCategory(null);
+    setDeleteLoading(false);
+    setDeleteError("");
+  };
+
+  const confirmDeleteCategory = async () => {
+    if (!selectedCategory) return;
+    setDeleteLoading(true);
+    setDeleteError("");
+    try {
+      await deleteCategory(selectedCategory.id);
+      closeDeleteModal();
+      loadCategories();
+    } catch (error) {
+      setDeleteError("Failed to delete category");
+      setDeleteLoading(false);
+    }
+  };
+
+  return (
+    <View style={styles.container}>
+      {/* Header */}
+      <View style={styles.header}>
+        <Pressable
+          onPress={() => router.push("/")}
+          style={styles.backButton}
+        >
+          <Svg
+            width={24}
+            height={24}
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke={Colors.primary}
+            strokeWidth="2"
+          >
+            <Path d="M19 12H5M12 19l-7-7 7-7" />
+          </Svg>
+        </Pressable>
+        <Text style={styles.headerTitle}>Manage Categories</Text>
+        <View style={styles.placeholder} />
+      </View>
+
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        {isLoading ? (
+          <Text style={styles.loadingText}>Loading categories...</Text>
+        ) : categories.length === 0 ? (
+          <Text style={styles.emptyText}>No categories found</Text>
+        ) : (
+          <>
+            <Text style={styles.subtitle}>
+              Manage your jewellery categories. The Archive category contains all items.
+            </Text>
+            {categories.map((category) => (
+              <View key={category.id || 'archive'} style={styles.categoryCard}>
+                <View style={styles.categoryInfo}>
+                  <Image
+                    source={{ uri: category.icon }}
+                    style={styles.categoryIcon}
+                  />
+                  <View style={styles.categoryDetails}>
+                    <Text style={styles.categoryName}>{category.name}</Text>
+                    <Text style={styles.itemCount}>
+                      {category.itemCount} {category.itemCount === 1 ? 'item' : 'items'}
+                    </Text>
+                  </View>
+                </View>
+                {!category.isDefault && (
+                  <TouchableOpacity
+                    style={styles.deleteButton}
+                    onPress={() => openDeleteModal(category)}
+                  >
+                    <Svg
+                      width={20}
+                      height={20}
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke={Colors.red}
+                      strokeWidth="2"
+                    >
+                      <Path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                    </Svg>
+                  </TouchableOpacity>
+                )}
+              </View>
+            ))}
+            {/* Delete Confirmation Modal */}
+            <Modal
+              visible={deleteModalVisible}
+              transparent={true}
+              animationType="fade"
+              onRequestClose={closeDeleteModal}
+            >
+              <View style={styles.modalOverlay}>
+                <View style={styles.modalContent}>
+                  <View style={styles.modalHeader}>
+                    <Text style={styles.modalTitle}>Delete Category</Text>
+                    <Pressable onPress={closeDeleteModal} style={styles.closeButton}>
+                      <Svg
+                        width={24}
+                        height={24}
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke={Colors.text}
+                        strokeWidth="2"
+                      >
+                        <Path d="M18 6L6 18M6 6l12 12" />
+                      </Svg>
+                    </Pressable>
+                  </View>
+                  <View style={styles.modalBody}>
+                    {selectedCategory && (
+                      <>
+                        <Text style={styles.modalLabel}>Are you sure you want to delete <Text style={{fontWeight:'bold'}}>{selectedCategory.name}</Text>?</Text>
+                        <Text style={styles.modalSubtext}>All {selectedCategory.itemCount} items will remain in Archive.</Text>
+                        {deleteError ? (
+                          <Text style={styles.modalError}>{deleteError}</Text>
+                        ) : null}
+                      </>
+                    )}
+                  </View>
+                  <View style={styles.modalFooter}>
+                    <TouchableOpacity
+                      style={styles.cancelButton}
+                      onPress={closeDeleteModal}
+                      disabled={deleteLoading}
+                    >
+                      <Text style={styles.cancelButtonText}>Cancel</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={styles.confirmDeleteButton}
+                      onPress={confirmDeleteCategory}
+                      disabled={deleteLoading}
+                    >
+                      <Text style={styles.confirmDeleteButtonText}>{deleteLoading ? "Deleting..." : "Delete"}</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              </View>
+            </Modal>
+          </>
+        )}
+      </ScrollView>
+    </View>
+  );
+}
+const styles = {
+  container: {
+    flex: 1,
+    backgroundColor: Colors.background,
+  },
+  header: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: 24,
+    paddingTop: 50,
+    paddingBottom: 24,
+  },
+  backButton: {
+    padding: 5,
+    backgroundColor: "#f5dfcbff",
+    borderRadius: 3,
+  },
+  headerTitle: {
+    fontSize: 24,
+    fontWeight: "bold",
+    color: Colors.text,
+  },
+  placeholder: {
+    width: 34,
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    padding: 24,
+  },
+  subtitle: {
+    fontSize: 18,
+    color: Colors.text,
+    marginBottom: 32,
+    textAlign: "center",
+  },
+  loadingText: {
+    fontSize: 22,
+    color: Colors.text,
+    textAlign: "center",
+    marginTop: 32,
+  },
+  emptyText: {
+    fontSize: 22,
+    color: Colors.text,
+    textAlign: "center",
+    marginTop: 32,
+  },
+  categoryCard: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    backgroundColor: Colors.white,
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: Colors.secondary,
+  },
+  categoryInfo: {
+    flexDirection: "row",
+    alignItems: "center",
+    flex: 1,
+  },
+  categoryIcon: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    marginRight: 16,
+  },
+  categoryDetails: {
+    flex: 1,
+  },
+  categoryName: {
+    fontSize: 20,
+    fontWeight: "600",
+    color: Colors.text,
+    marginBottom: 4,
+  },
+  itemCount: {
+    fontSize: 14,
+    color: Colors.border,
+    fontWeight: "500",
+  },
+  deleteButton: {
+    padding: 8,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 24,
+  },
+  modalContent: {
+    backgroundColor: Colors.white,
+    borderRadius: 12,
+    width: "95%",
+    maxWidth: 700,
+    maxHeight: "90%",
+    elevation: 5,
+  },
+  modalHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    padding: 24,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.background,
+  },
+  modalTitle: {
+    fontSize: 24,
+    fontWeight: "bold",
+    color: Colors.text,
+  },
+  closeButton: {
+    padding: 4,
+  },
+  modalBody: {
+    padding: 24,
+  },
+  modalLabel: {
+    fontSize: 18,
+    fontWeight: "600",
+    color: Colors.text,
+    marginBottom: 12,
+  },
+  modalSubtext: {
+    fontSize: 16,
+    color: Colors.border,
+    marginBottom: 12,
+    textAlign: "center",
+  },
+  modalError: {
+    color: "#e74c3c",
+    fontSize: 16,
+    marginBottom: 12,
+    textAlign: "center",
+  },
+  modalFooter: {
+    flexDirection: "row",
+    gap: 12,
+    padding: 24,
+    borderTopWidth: 1,
+    borderTopColor: Colors.background,
+  },
+  cancelButton: {
+    flex: 1,
+    backgroundColor: Colors.border,
+    paddingVertical: 16,
+    borderRadius: 8,
+    alignItems: "center",
+  },
+  cancelButtonText: {
+    color: Colors.white,
+    fontSize: 18,
+    fontWeight: "bold",
+  },
+  confirmDeleteButton: {
+    flex: 1,
+    backgroundColor: "#e74c3c",
+    paddingVertical: 16,
+    borderRadius: 8,
+    alignItems: "center",
+  },
+  confirmDeleteButtonText: {
+    color: Colors.white,
+    fontSize: 18,
+    fontWeight: "bold",
+  },
+};

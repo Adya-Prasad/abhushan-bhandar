@@ -147,16 +147,14 @@ export const getAllCategories = async () => {
     const archiveCategory = {
       id: DEFAULT_CATEGORY.id,
       name: DEFAULT_CATEGORY.name,
-      iconSource: DEFAULT_CATEGORY.icon,
+      icon: DEFAULT_CATEGORY.icon,
       isDefault: true,
     };
     
-    // Custom categories with base64 icons
+    // Keep custom categories as is, they already have the correct format
     const formattedCustomCategories = customCategories
       .map((cat) => ({
-        id: cat.id,
-        name: cat.name,
-        iconSource: cat.icon,
+        ...cat,
         isCustom: true,
       }))
       // Sort alphabetically by name

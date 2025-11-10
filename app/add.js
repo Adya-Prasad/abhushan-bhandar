@@ -16,7 +16,6 @@ import {
 import Svg, { Path } from "react-native-svg";
 import { Colors, FontSizes, Spacing } from "../constants/theme";
 import {
-  deleteCategory,
   getAllCategories,
   saveCategory,
   saveJewelleryItem,
@@ -40,8 +39,15 @@ export default function AddScreen() {
   const [carat, setCarat] = useState("");
 
   const loadCategories = useCallback(async () => {
-    const allCategories = await getAllCategories();
-    setCategories(allCategories);
+    try {
+      console.log('Loading categories...');
+      const allCategories = await getAllCategories();
+      console.log('Categories loaded:', allCategories);
+      setCategories(allCategories);
+    } catch (error) {
+      console.error('Error loading categories:', error);
+      Alert.alert('Error', 'Failed to load categories');
+    }
   }, []);
 
   useFocusEffect(
@@ -268,78 +274,6 @@ export default function AddScreen() {
             >
               <Text style={styles.submitButtonText}>Create Category</Text>
             </TouchableOpacity>
-
-            {/* Category List */}
-            <View style={styles.categoryListContainer}>
-              <Text style={styles.categoryListTitle}>Existing Categories</Text>
-              {categories.length > 1 ? ( // More than just Archive
-                <ScrollView style={styles.categoryList}>
-                  {categories
-                    .filter(cat => !cat.isDefault) // Don't show Archive in the list
-                    .map((category, index) => (
-                      <View key={category.id || index} style={styles.categoryListItem}>
-                        <View style={styles.categoryListItemContent}>
-                          <Image 
-                            source={{ uri: category.iconSource }}
-                            style={styles.categoryListItemIcon}
-                          />
-                          <Text style={styles.categoryListItemText}>
-                            {category.name}
-                          </Text>
-                        </View>
-                        <TouchableOpacity
-                          style={styles.categoryDeleteButton}
-                          onPress={() => {
-                            Alert.alert(
-                              "Delete Category",
-                              `Are you sure you want to delete "${category.name}"?\n\nAll items will remain in Archive.`,
-                              [
-                                { text: "Cancel", style: "cancel" },
-                                {
-                                  text: "Delete",
-                                  style: "destructive",
-                                  onPress: async () => {
-                                    try {
-                                      await deleteCategory(category.id);
-                                      Alert.alert(
-                                        "Success",
-                                        "Category deleted successfully"
-                                      );
-                                      await loadCategories(); // Refresh the list
-                                    } catch (error) {
-                                      console.error("Delete error:", error);
-                                      Alert.alert(
-                                        "Error",
-                                        "Failed to delete category. Please try again."
-                                      );
-                                    }
-                                  },
-                                },
-                              ],
-                              { cancelable: true }
-                            );
-                          }}
-                        >
-                          <Svg
-                            width={20}
-                            height={20}
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="#e74c3c"
-                            strokeWidth="2"
-                          >
-                            <Path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-                          </Svg>
-                        </TouchableOpacity>
-                      </View>
-                    ))}
-                </ScrollView>
-              ) : (
-                <Text style={styles.noCategoriesText}>
-                  No custom categories yet. Create one above!
-                </Text>
-              )}
-            </View>
           </View>
         ) : (
           <View style={styles.formSection}>
@@ -714,55 +648,5 @@ const styles = StyleSheet.create({
     color: Colors.white,
     fontSize: FontSizes.large,
     fontWeight: "bold",
-  },
-  categoryListContainer: {
-    marginTop: Spacing.xl,
-  },
-  categoryListTitle: {
-    fontSize: FontSizes.large,
-    fontWeight: "600",
-    color: Colors.text,
-    marginBottom: Spacing.md,
-  },
-  categoryList: {
-    maxHeight: 300,
-  },
-  categoryListItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingVertical: Spacing.md,
-    paddingHorizontal: Spacing.md,
-    backgroundColor: Colors.white,
-    borderRadius: 8,
-    marginBottom: Spacing.sm,
-    borderWidth: 1,
-    borderColor: Colors.secondary,
-  },
-  categoryListItemContent: {
-    flexDirection: "row",
-    alignItems: "center",
-    flex: 1,
-  },
-  categoryListItemIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    marginRight: Spacing.md,
-  },
-  categoryListItemText: {
-    fontSize: FontSizes.medium,
-    color: Colors.text,
-    fontWeight: "600",
-  },
-  categoryDeleteButton: {
-    padding: 8,
-  },
-  noCategoriesText: {
-    fontSize: FontSizes.medium,
-    color: Colors.border,
-    textAlign: "center",
-    marginTop: Spacing.lg,
-    fontStyle: "italic",
   },
 });
