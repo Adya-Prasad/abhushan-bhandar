@@ -1,4 +1,5 @@
 import { useFocusEffect } from "@react-navigation/native";
+import * as ImagePicker from "expo-image-picker";
 import { router } from "expo-router";
 import { useCallback, useState } from "react";
 import {
@@ -8,21 +9,27 @@ import {
   Pressable,
   ScrollView,
   Text,
+  TextInput,
   TouchableOpacity,
   View
 } from "react-native";
 import Svg, { Path } from "react-native-svg";
 import { Colors } from "../constants/theme";
-import { deleteCategory, getAllCategories, getJewelleryByCategory } from "../utils/database";
+import { deleteCategory, getAllCategories, getJewelleryByCategory, updateCategory } from "../utils/database";
 
 export default function ManageCategoriesScreen() {
 // ...existing code...
   const [categories, setCategories] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
+  const [editModalVisible, setEditModalVisible] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState(null);
+  const [editName, setEditName] = useState("");
+  const [editIcon, setEditIcon] = useState("");
   const [deleteLoading, setDeleteLoading] = useState(false);
+  const [editLoading, setEditLoading] = useState(false);
   const [deleteError, setDeleteError] = useState("");
+  const [editError, setEditError] = useState("");
 
   const loadCategories = useCallback(async () => {
     try {
@@ -77,9 +84,67 @@ export default function ManageCategoriesScreen() {
       await deleteCategory(selectedCategory.id);
       closeDeleteModal();
       loadCategories();
-    } catch (error) {
+    } catch (_error) {
       setDeleteError("Failed to delete category");
       setDeleteLoading(false);
+    }
+  };
+
+  const openEditModal = (category) => {
+    if (category.isDefault) {
+      Alert.alert('Error', 'Cannot edit the Archive category');
+      return;
+    }
+    setSelectedCategory(category);
+    setEditName(category.name);
+    setEditIcon(category.icon || "");
+    setEditModalVisible(true);
+    setEditError("");
+  };
+
+  const closeEditModal = () => {
+    setEditModalVisible(false);
+    setSelectedCategory(null);
+    setEditName("");
+    setEditIcon("");
+    setEditLoading(false);
+    setEditError("");
+  };
+
+  const confirmEditCategory = async () => {
+    if (!selectedCategory || !editName.trim()) {
+      setEditError("Category name is required");
+      return;
+    }
+    setEditLoading(true);
+    setEditError("");
+    try {
+      await updateCategory(selectedCategory.id, {
+        name: editName,
+        icon: editIcon || selectedCategory.icon,
+      });
+      closeEditModal();
+      loadCategories();
+    } catch (_error) {
+      setEditError("Failed to update category");
+      setEditLoading(false);
+    }
+  };
+
+  const pickImage = async () => {
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+      });
+
+      if (!result.canceled && result.assets[0]) {
+        setEditIcon(result.assets[0].uri);
+      }
+    } catch (_error) {
+      Alert.alert("Error", "Failed to pick image");
     }
   };
 
@@ -135,21 +200,39 @@ export default function ManageCategoriesScreen() {
                   </View>
                 </View>
                 {!category.isDefault && (
-                  <TouchableOpacity
-                    style={styles.deleteButton}
-                    onPress={() => openDeleteModal(category)}
-                  >
-                    <Svg
-                      width={20}
-                      height={20}
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke={Colors.red}
-                      strokeWidth="2"
+                  <View style={styles.actionButtons}>
+                    <TouchableOpacity
+                      style={styles.editButton}
+                      onPress={() => openEditModal(category)}
                     >
-                      <Path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-                    </Svg>
-                  </TouchableOpacity>
+                      <Svg
+                        width={20}
+                        height={20}
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke={Colors.primary}
+                        strokeWidth="2"
+                      >
+                        <Path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                        <Path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                      </Svg>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={styles.deleteButton}
+                      onPress={() => openDeleteModal(category)}
+                    >
+                      <Svg
+                        width={20}
+                        height={20}
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke={Colors.red}
+                        strokeWidth="2"
+                      >
+                        <Path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                      </Svg>
+                    </TouchableOpacity>
+                  </View>
                 )}
               </View>
             ))}
@@ -202,6 +285,89 @@ export default function ManageCategoriesScreen() {
                       disabled={deleteLoading}
                     >
                       <Text style={styles.confirmDeleteButtonText}>{deleteLoading ? "Deleting..." : "Delete"}</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              </View>
+            </Modal>
+
+            {/* Edit Category Modal */}
+            <Modal
+              visible={editModalVisible}
+              transparent={true}
+              animationType="fade"
+              onRequestClose={closeEditModal}
+            >
+              <View style={styles.modalOverlay}>
+                <View style={styles.modalContent}>
+                  <View style={styles.modalHeader}>
+                    <Text style={styles.modalTitle}>Edit Category</Text>
+                    <Pressable onPress={closeEditModal} style={styles.closeButton}>
+                      <Svg
+                        width={24}
+                        height={24}
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke={Colors.text}
+                        strokeWidth="2"
+                      >
+                        <Path d="M18 6L6 18M6 6l12 12" />
+                      </Svg>
+                    </Pressable>
+                  </View>
+                  <View style={styles.modalBody}>
+                    {selectedCategory && (
+                      <>
+                        <Text style={styles.modalLabel}>Category Name</Text>
+                        <TextInput
+                          style={styles.modalInput}
+                          value={editName}
+                          onChangeText={setEditName}
+                          placeholder="Enter category name"
+                          placeholderTextColor={Colors.border}
+                        />
+                        <Text style={[styles.modalLabel, { marginTop: 20 }]}>Category Icon</Text>
+                        <View style={styles.iconContainer}>
+                          <Image
+                            source={{ uri: editIcon }}
+                            style={styles.categoryIconPreview}
+                          />
+                          <TouchableOpacity
+                            style={styles.uploadIconButton}
+                            onPress={pickImage}
+                          >
+                            <Svg
+                              width={24}
+                              height={24}
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke={Colors.primary}
+                              strokeWidth="2"
+                            >
+                              <Path d="M12 5v14M5 12h14" />
+                            </Svg>
+                          </TouchableOpacity>
+                        </View>
+                        {editError ? (
+                          <Text style={styles.modalError}>{editError}</Text>
+                        ) : null}
+                      </>
+                    )}
+                  </View>
+                  <View style={styles.modalFooter}>
+                    <TouchableOpacity
+                      style={styles.cancelButton}
+                      onPress={closeEditModal}
+                      disabled={editLoading}
+                    >
+                      <Text style={styles.cancelButtonText}>Cancel</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={styles.confirmDeleteButton}
+                      onPress={confirmEditCategory}
+                      disabled={editLoading}
+                    >
+                      <Text style={styles.confirmDeleteButtonText}>{editLoading ? "Saving..." : "Save"}</Text>
                     </TouchableOpacity>
                   </View>
                 </View>
@@ -299,6 +465,14 @@ const styles = {
     color: Colors.border,
     fontWeight: "500",
   },
+  actionButtons: {
+    flexDirection: "row",
+    gap: 8,
+    alignItems: "center",
+  },
+  editButton: {
+    padding: 8,
+  },
   deleteButton: {
     padding: 8,
   },
@@ -353,6 +527,46 @@ const styles = {
     fontSize: 16,
     marginBottom: 12,
     textAlign: "center",
+  },
+  modalInput: {
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 16,
+    color: Colors.text,
+    backgroundColor: Colors.white,
+    borderWidth: 1,
+    borderColor: Colors.secondary,
+    marginBottom: 12,
+  },
+  previewIcon: {
+    width: 80,
+    height: 80,
+    borderRadius: 8,
+    marginVertical: 12,
+    alignSelf: "center",
+  },
+  iconContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    marginTop: 12,
+  },
+  categoryIconPreview: {
+    width: 80,
+    height: 80,
+    borderRadius: 12,
+    backgroundColor: Colors.border,
+  },
+  uploadIconButton: {
+    width: 48,
+    height: 48,
+    borderRadius: 8,
+    borderWidth: 2,
+    borderColor: Colors.primary,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: `${Colors.primary}08`,
   },
   modalFooter: {
     flexDirection: "row",

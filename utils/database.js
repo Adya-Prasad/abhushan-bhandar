@@ -184,3 +184,20 @@ export const deleteCategory = async (categoryId) => {
     throw error;
   }
 };
+
+export const updateCategory = async (categoryId, updatedData) => {
+  try {
+    const existingCategories = await getCustomCategories();
+    const updatedCategories = existingCategories.map((cat) =>
+      cat.id === categoryId ? { ...cat, ...updatedData } : cat
+    );
+    await AsyncStorage.setItem(
+      CATEGORIES_KEY,
+      JSON.stringify(updatedCategories)
+    );
+    return true;
+  } catch (error) {
+    console.error("Error updating category:", error);
+    throw error;
+  }
+};

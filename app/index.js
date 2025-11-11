@@ -1,5 +1,4 @@
 import { useFocusEffect } from "@react-navigation/native";
-import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import { useCallback, useState } from "react";
 import {
@@ -38,14 +37,7 @@ export default function HomeScreen() {
       >
         {/* Header */}
         <View style={styles.header}>
-          <LinearGradient
-            colors={["#d4a574", "#c49059", "#8b6f47"]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
-            style={styles.logoGradientContainer}
-          >
-            <Text style={styles.logo}>ABHUSHAN BHANDAR</Text>
-          </LinearGradient>
+          <Text style={styles.logo}>ABHUSHAN BHANDAR</Text>
           <View style={styles.headerBtns}>
             <Pressable
               onPress={() => router.push("/add")}
@@ -76,49 +68,55 @@ export default function HomeScreen() {
 
         {/* Categories Grid */}
         <View style={styles.jewelleryCategories}>
-          <Pressable
-            style={({ pressed }) => [
-              styles.categoryItem,
-              styles.manageCategoryCard,
-              pressed && styles.categoryItemHovered,
-            ]}
-            onPress={() => router.push("/manage-categories")}
-          >
-            <View style={styles.manageCategoryIcon}>
-              <Svg
-                width={40}
-                height={40}
-                viewBox="0 0 24 24"
-                fill={Colors.primary}
-                stroke={Colors.white}
-                strokeWidth="1"
-              >
-                <Path d="M3 17v2h6v-2H3zM3 5v2h10V5H3zm10 16v-2h8v-2h-8v-2h-2v6h2zM7 9v2H3v2h4v2h2V9H7zm14 4v-2H11v2h10zm-6-4h2V7h4V5h-4V3h-2v6z" />
-              </Svg>
-            </View>
-            <Text style={styles.categoryTitle}>Manage Categories</Text>
-          </Pressable>
+          {/** render normal categories first, keep Archive (isDefault) last **/}
+          {(() => {
+            const archive = categories.find(c => c.isDefault || (c.name || '').toLowerCase() === 'archive');
+            const regular = categories.filter(c => !(c.isDefault || (c.name || '').toLowerCase() === 'archive'));
+            return (
+              <>
+                {regular.map((category, index) => (
+                  <Pressable
+                    key={category.id || index}
+                    style={({ pressed }) => [styles.categoryItem, pressed && styles.categoryItemHovered]}
+                    onPress={() => router.push(`/category/${category.name.toLowerCase()}`)}
+                  >
+                    <View style={styles.categoryImageContainer}>
+                      <Image source={{ uri: category.icon }} style={styles.categoryImage} resizeMode="cover" />
+                    </View>
+                    <Text style={styles.categoryTitle}>{category.name}</Text>
+                  </Pressable>
+                ))}
 
-          {categories.map((category, index) => (
-            <Pressable
-              key={category.id || index}
-              style={({ pressed }) => [
-                styles.categoryItem,
-                pressed && styles.categoryItemHovered,
-              ]}
-              onPress={() =>
-                router.push(`/category/${category.name.toLowerCase()}`)
-              }
-            >
-              <Image 
-                source={{ uri: category.icon }}
-                style={styles.categoryImage}
-                resizeMode="cover"
-              />
-              <Text style={styles.categoryTitle}>{category.name}</Text>
-            </Pressable>
-          ))}
-        </View>
+                {/* Archive (if present) - reuse same category styles */}
+                {archive && (
+                  <Pressable
+                    key={archive.id || 'archive'}
+                    style={({ pressed }) => [styles.categoryItem, pressed && styles.categoryItemHovered]}
+                    onPress={() => router.push(`/category/${archive.name.toLowerCase()}`)}
+                  >
+                    <View style={styles.categoryImageContainer}>
+                      <Image source={{ uri: archive.icon }} style={styles.categoryImage} resizeMode="cover" />
+                    </View>
+                    <Text style={styles.categoryTitle}>{archive.name}</Text>
+                  </Pressable>
+                )}
+
+                {/* Manage Categories - kept last and reuses same item style for consistency */}
+                <Pressable
+                  style={({ pressed }) => [styles.categoryItem, pressed && styles.categoryItemHovered]}
+                  onPress={() => router.push('/manage-categories')}
+                >
+                  <View style={styles.categoryImageContainer}>
+                    <Svg width={48} height={48} viewBox="0 0 24 24" fill={Colors.primary} stroke={Colors.white} strokeWidth="1">
+                      <Path d="M3 17v2h6v-2H3zM3 5v2h10V5H3zm10 16v-2h8v-2h-8v-2h-2v6h2zM7 9v2H3v2h4v2h2V9H7zm14 4v-2H11v2h10zm-6-4h2V7h4V5h-4V3h-2v6z" />
+                    </Svg>
+                  </View>
+                  <Text style={styles.categoryTitle}>Manage Categories</Text>
+                </Pressable>
+              </>
+            );
+          })()}
+  </View>
 
         {/* Footer */}
         <View style={styles.footer}>
@@ -144,7 +142,8 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     paddingTop: 30,
-    paddingBottom: Spacing.lg,
+    paddingBottom: 20,
+    paddingHorizontal: Spacing.lg,
   },
   logoGradientContainer: {
     paddingHorizontal: 16,
@@ -152,29 +151,28 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   logo: {
-    fontSize: 22,
+    fontSize: 18,
     fontWeight: "bold",
-    letterSpacing: 1.5,
-    color: "#ffffff",
-    textShadow: "1px 1px 2px rgba(0, 0, 0, 0.3)",
+    letterSpacing: 1,
+    color: Colors.primary,
+    flex: 1,
   },
   headerBtns: {
     flexDirection: "row",
-    gap: Spacing.sm,
+    gap: 6,
   },
   headerButton: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
     borderRadius: 6,
     backgroundColor: Colors.primary,
-    elevation: 4,
+    elevation: 2,
   },
   headerButtonText: {
     color: "#fff",
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: "600",
   },
   scrollView: {
@@ -209,42 +207,38 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.white,
     borderRadius: 10,
     overflow: "hidden",
-    elevation: 2,
-    // remove web-only transition property for native compatibility
+    elevation: 3,
     margin: 12,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
   },
   categoryItemHovered: {
-    elevation: 12,
-    shadowColor: "#d4a986ff",
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.9,
-    shadowRadius: 35,
-    transform: [{ translateY: -4 }],
+    elevation: 8,
   },
-  categoryImage: {
-    width: "100%",
-    height: 120,
-  },
-  categoryTitle: {
-    fontSize: 25,
-    fontWeight: "600",
-    color: Colors.white,
-    textAlign: "center",
-    backgroundColor: Colors.primary,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    marginHorizontal: 10,
-    marginVertical: 12,
-    borderRadius: 5,
-  },
-  manageCategoryCard: {
-    backgroundColor: Colors.white,
-  },
-  manageCategoryIcon: {
+  categoryImageContainer: {
+    width: '100%',
+    aspectRatio: 1,
+    borderRadius: 8,
+    overflow: 'hidden',
+    backgroundColor: Colors.secondary,
     alignItems: 'center',
     justifyContent: 'center',
-    height: 120,
-    backgroundColor: Colors.secondary,
+  },
+  categoryImage: {
+    width: '100%',
+    height: '100%',
+  },
+  categoryTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: Colors.text,
+    textAlign: 'center',
+    marginTop: 10,
+    paddingHorizontal: 8,
+    paddingVertical: 6,
+    backgroundColor: 'transparent',
   },
 
   footer: {
