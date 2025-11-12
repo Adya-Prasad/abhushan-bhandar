@@ -138,10 +138,32 @@ export default function ManageCategoriesScreen() {
         allowsEditing: true,
         aspect: [1, 1],
         quality: 0.8,
+        base64: true,
       });
 
-      if (!result.canceled && result.assets[0]) {
-        setEditIcon(result.assets[0].uri);
+      if (!result.canceled && result.assets && result.assets[0]) {
+        const asset = result.assets[0];
+        // Prefer storing a data URI (base64) when available — this persists across reloads and works on web/native
+        if (asset.base64) {
+          // Guess mime type from uri extension if possible, otherwise default to jpeg
+          let mime = "image/jpeg";
+          try {
+            const uri = asset.uri || "";
+            const ext = uri.split(".").pop();
+            if (ext) {
+              const e = ext.toLowerCase();
+              if (e === "png") mime = "image/png";
+              else if (e === "webp") mime = "image/webp";
+              else if (e === "jpg" || e === "jpeg") mime = "image/jpeg";
+            }
+          } catch (_e) {}
+
+          const dataUri = `data:${mime};base64,${asset.base64}`;
+          setEditIcon(dataUri);
+        } else if (asset.uri) {
+          // Fallback to the file URI
+          setEditIcon(asset.uri);
+        }
       }
     } catch (_error) {
       Alert.alert("Error", "Failed to pick image");

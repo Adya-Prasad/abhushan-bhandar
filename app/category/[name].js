@@ -2,28 +2,31 @@ import { useFocusEffect } from "@react-navigation/native";
 import { router, useLocalSearchParams } from "expo-router";
 import { useCallback, useState } from "react";
 import {
-    Alert,
-    Dimensions,
-    Image,
-    Modal,
-    Pressable,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  Alert,
+  Dimensions,
+  Image,
+  Modal,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import Svg, { Path } from "react-native-svg";
 import { Colors, FontSizes, Spacing } from "../../constants/theme";
 import {
-    deleteJewelleryItem,
-    getJewelleryByCategory,
-    updateJewelleryItem,
+  deleteJewelleryItem,
+  getJewelleryByCategory,
+  updateJewelleryItem,
 } from "../../utils/database";
 
 const { width } = Dimensions.get("window");
-const isMobile = width < 768;
+// Breakpoints: mobile, tablet, wide
+const isMobile = width < 600; // phones
+const isTablet = width >= 600 && width < 1024; // tablets
+const isWide = width >= 1024; // large / desktop
 
 export default function CategoryScreen() {
   const { name } = useLocalSearchParams();
@@ -38,6 +41,9 @@ export default function CategoryScreen() {
   const [editWeight, setEditWeight] = useState("");
   const [editCarat, setEditCarat] = useState("");
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  // Lightbox state
+  const [lightboxVisible, setLightboxVisible] = useState(false);
+  const [lightboxIndex, setLightboxIndex] = useState(0);
 
   const loadJewellery = useCallback(async () => {
     try {
@@ -64,6 +70,30 @@ export default function CategoryScreen() {
     setEditWeight(item.weight || "");
     setEditCarat(item.carat || "");
     setEditModalVisible(true);
+  };
+
+  const openLightbox = (index) => {
+    // debug: log the selected image URI to help diagnose rendering issues
+    try {
+      const uri = jewelleryItems[index] ? jewelleryItems[index].image : null;
+      console.log("openLightbox", index, uri);
+    } catch (e) {
+      console.log("openLightbox error", e);
+    }
+    setLightboxIndex(index);
+    setLightboxVisible(true);
+  };
+
+  const closeLightbox = () => {
+    setLightboxVisible(false);
+  };
+
+  const showPrev = () => {
+    setLightboxIndex((i) => (i - 1 + jewelleryItems.length) % jewelleryItems.length);
+  };
+
+  const showNext = () => {
+    setLightboxIndex((i) => (i + 1) % jewelleryItems.length);
   };
 
   const closeEditModal = () => {
@@ -192,14 +222,17 @@ export default function CategoryScreen() {
             </Text>
           </View>
         ) : (
+          <>
           <View style={styles.gridContainer}>
-            {jewelleryItems.map((item) => (
+            {jewelleryItems.map((item, idx) => (
               <View key={item.id} style={styles.gridItem}>
                 <View style={styles.card}>
-                  <Image
-                    source={{ uri: item.image }}
-                    style={styles.cardImage}
-                  />
+                  <Pressable onPress={() => openLightbox(idx)}>
+                    <Image
+                      source={{ uri: item.image }}
+                      style={styles.cardImage}
+                    />
+                  </Pressable>
                   <View style={styles.cardContent}>
                     <Text style={styles.cardTitle}>{item.name}</Text>
                     {item.imgId && (
@@ -256,6 +289,82 @@ export default function CategoryScreen() {
               </View>
             ))}
           </View>
+
+          {/* Lightbox Modal */}
+          <Modal
+            visible={lightboxVisible}
+            transparent={true}
+            animationType="fade"
+            onRequestClose={closeLightbox}
+          >
+            <View style={styles.lightboxOverlay}>
+              <View style={styles.lightboxContent}>
+                {/* Top: Close button */}
+                <View style={styles.lightboxTopRow}>
+                  <View style={{ flex: 1 }} />
+                  <Pressable style={styles.lightboxClose} onPress={closeLightbox}>
+                    <Svg width={24} height={24} viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2">
+                      <Path d="M18 6L6 18M6 6l12 12" />
+                    </Svg>
+                  </Pressable>
+                </View>
+
+                {/* Middle: Image (centered) */}
+                <View style={[styles.lightboxImageWrap, { backgroundColor: '#000' }]}> 
+                  {/* DEBUG: use plain View instead of ScrollView to ensure image renders */}
+                  <View style={styles.lightboxScrollView}>
+                    {jewelleryItems[lightboxIndex] ? (
+                      <Image
+                        key={`lightbox-img-${lightboxIndex}-${jewelleryItems[lightboxIndex].imgId || ''}`}
+                        source={{ uri: jewelleryItems[lightboxIndex].image }}
+                        style={[styles.lightboxImage, { borderWidth: 1, borderColor: '#fff' }]}
+                      />
+                    ) : (
+                      <Text style={{ color: Colors.white }}>No image to display</Text>
+                    )}
+                  </View>
+                </View>
+
+                {/* Bottom: Details + navigation arrows beside details */}
+                <View style={styles.lightboxDetailsRow}>
+                  <Pressable onPress={showPrev} style={styles.detailsNavButton}>
+                    <Svg width={28} height={28} viewBox="0 0 24 24" fill="none" stroke={Colors.primary} strokeWidth="2">
+                      <Path d="M15 18l-6-6 6-6" />
+                    </Svg>
+                  </Pressable>
+
+                  <View style={styles.lightboxDetailsCenter}>
+                    {jewelleryItems[lightboxIndex] && (
+                      <>
+                        <Text style={styles.lightboxTitle}>{jewelleryItems[lightboxIndex].name}</Text>
+                        <View style={styles.lightboxDetailChips}>
+                          {jewelleryItems[lightboxIndex].metal ? (
+                            <View style={styles.detailChip}><Text style={styles.detailChipText}>{jewelleryItems[lightboxIndex].metal}</Text></View>
+                          ) : null}
+                          {jewelleryItems[lightboxIndex].weight ? (
+                            <View style={styles.detailChip}><Text style={styles.detailChipText}>{jewelleryItems[lightboxIndex].weight}</Text></View>
+                          ) : null}
+                          {jewelleryItems[lightboxIndex].carat ? (
+                            <View style={styles.detailChip}><Text style={styles.detailChipText}>{jewelleryItems[lightboxIndex].carat}</Text></View>
+                          ) : null}
+                          {jewelleryItems[lightboxIndex].imgId ? (
+                            <View style={styles.detailChip}><Text style={styles.detailChipText}>ID: {jewelleryItems[lightboxIndex].imgId}</Text></View>
+                          ) : null}
+                        </View>
+                      </>
+                    )}
+                  </View>
+
+                  <Pressable onPress={showNext} style={styles.detailsNavButton}>
+                    <Svg width={28} height={28} viewBox="0 0 24 24" fill="none" stroke={Colors.primary} strokeWidth="2">
+                      <Path d="M9 6l6 6-6 6" />
+                    </Svg>
+                  </Pressable>
+                </View>
+              </View>
+            </View>
+          </Modal>
+          </>
         )}
       </ScrollView>
 
@@ -472,9 +581,11 @@ const styles = StyleSheet.create({
     gap: 15,
   },
   gridItem: {
-    flexBasis: isMobile ? "47%" : "31%",
-    minWidth: isMobile ? 140 : 160,
+    // 2 per row on mobile, 3 per row on tablet, 4 per row on wide screens
+    flexBasis: isWide ? "23%" : isTablet ? "31%" : "48%",
+    minWidth: isMobile ? 120 : 160,
     flexGrow: 1,
+    margin: 6,
   },
   card: {
     backgroundColor: Colors.white,
@@ -541,6 +652,140 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     padding: Spacing.lg,
+  },
+  /* Lightbox styles */
+  lightboxOverlay: {
+    flex: 1,
+    // 20% transparent background
+    backgroundColor: "rgba(0,0,0,0.2)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: Spacing.lg,
+  },
+  lightboxContent: {
+    width: '95%',
+    maxWidth: 1200,
+    maxHeight: '90%',
+    // make content taller so image can occupy more vertical space
+    height: '85%',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  lightboxTopRow: {
+    width: '100%',
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    paddingBottom: Spacing.sm,
+  },
+  lightboxClose: {
+    position: 'absolute',
+    top: 12,
+    right: 12,
+    zIndex: 20,
+    padding: 8,
+  },
+  lightboxImageWrap: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: isMobile ? '100%' : '60%',
+    maxWidth: 900,
+    // explicit height so child Image with height:100% can fill available space
+    height: isMobile ? '50%' : '65%',
+    position: 'relative',
+  },
+  lightboxNavLeft: {
+    position: 'absolute',
+    left: 6,
+    top: '50%',
+    marginTop: -24,
+    zIndex: 15,
+    padding: 6,
+  },
+  lightboxNavRight: {
+    position: 'absolute',
+    right: 6,
+    top: '50%',
+    marginTop: -24,
+    zIndex: 15,
+    padding: 6,
+  },
+  lightboxScroll: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '100%',
+  },
+  lightboxScrollView: {
+    width: '100%',
+    height: '100%',
+  },
+  lightboxImage: {
+    // make image fill the available height inside its wrapper while preserving aspect ratio
+    width: '100%',
+    height: '100%',
+    resizeMode: 'contain',
+  },
+  lightboxDetails: {
+    width: isMobile ? '100%' : '35%',
+    padding: Spacing.lg,
+    backgroundColor: 'transparent',
+  },
+  lightboxDetailsRow: {
+    width: '100%',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: Spacing.md,
+  },
+  detailsNavButton: {
+    padding: 8,
+  },
+  lightboxDetailsCenter: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  lightboxDetailChips: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    gap: 8,
+    marginTop: Spacing.sm,
+  },
+  detailChip: {
+    backgroundColor: Colors.white,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 12,
+    marginRight: 8,
+  },
+  detailChipText: {
+    color: Colors.text,
+    fontSize: FontSizes.small,
+    fontWeight: '600',
+  },
+  lightboxDetailHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: Spacing.md,
+  },
+  lightboxTitle: {
+    fontSize: FontSizes.large,
+    fontWeight: '700',
+    color: Colors.white,
+    maxWidth: '80%'
+  },
+  lightboxArrowsInline: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  lightboxSmallArrow: {
+    padding: 6,
+  },
+  lightboxText: {
+    color: Colors.white,
+    fontSize: FontSizes.medium,
+    marginBottom: Spacing.sm,
   },
   modalContent: {
     backgroundColor: Colors.white,

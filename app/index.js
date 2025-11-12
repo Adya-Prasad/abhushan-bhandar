@@ -207,16 +207,9 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.white,
     borderRadius: 10,
     overflow: "hidden",
-    elevation: 3,
     margin: 12,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
   },
-  categoryItemHovered: {
-    elevation: 8,
-  },
+  categoryItemHovered: {},
   categoryImageContainer: {
     width: '100%',
     aspectRatio: 1,
