@@ -73,13 +73,6 @@ export default function CategoryScreen() {
   };
 
   const openLightbox = (index) => {
-    // debug: log the selected image URI to help diagnose rendering issues
-    try {
-      const uri = jewelleryItems[index] ? jewelleryItems[index].image : null;
-      console.log("openLightbox", index, uri);
-    } catch (e) {
-      console.log("openLightbox error", e);
-    }
     setLightboxIndex(index);
     setLightboxVisible(true);
   };
@@ -152,14 +145,14 @@ export default function CategoryScreen() {
       <View style={styles.header}>
         <TouchableOpacity
           onPress={() => router.push("/")}
-          style={styles.backButton}
+          style={styles.actionButton}
         >
           <Svg
             width={24}
             height={24}
             viewBox="0 0 24 24"
             fill="none"
-            stroke={Colors.primary}
+            stroke={Colors.white}
             strokeWidth="2"
           >
             <Path d="M19 12H5M12 19l-7-7 7-7" />
@@ -168,35 +161,27 @@ export default function CategoryScreen() {
         <Text style={styles.headerTitle}>{categoryName}</Text>
         <View style={styles.headerActions}>
           <TouchableOpacity
-            style={styles.wishlistButton}
-            onPress={() =>
-              Alert.alert("Wishlist", "Wishlist feature coming soon!")
-            }
-          >
-            <Text style={styles.wishlistText}>Wishlist</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
             style={[styles.actionButton, editMode && styles.actionButtonActive]}
             onPress={() => setEditMode(!editMode)}
           >
             {editMode ? (
               <Svg
-                width={22}
-                height={22}
+                width={25}
+                height={25}
                 viewBox="0 0 24 24"
                 fill="none"
-                stroke={Colors.primary}
+                stroke={Colors.white}
                 strokeWidth="3"
               >
                 <Path d="M20 6L9 17l-5-5" />
               </Svg>
             ) : (
               <Svg
-                width={22}
-                height={22}
+                width={25}
+                height={25}
                 viewBox="0 0 24 24"
                 fill="none"
-                stroke={Colors.primary}
+                stroke={Colors.white}
                 strokeWidth="2"
               >
                 <Path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
@@ -238,34 +223,6 @@ export default function CategoryScreen() {
                     {item.imgId && (
                       <Text style={styles.cardImgId}>ID: {item.imgId}</Text>
                     )}
-                    {item.metal && (
-                      <Text style={styles.cardDetail}>Metal: {item.metal}</Text>
-                    )}
-                    {item.weight && (
-                      <Text style={styles.cardDetail}>
-                        Weight: {item.weight}
-                      </Text>
-                    )}
-                    {item.carat && (
-                      <Text style={styles.cardDetail}>Carat: {item.carat}</Text>
-                    )}
-                    <Pressable
-                      style={styles.likeButton}
-                      onPress={() =>
-                        Alert.alert("Like", "Like feature coming soon!")
-                      }
-                    >
-                      <Svg
-                        width={20}
-                        height={20}
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke={Colors.primary}
-                        strokeWidth="2"
-                      >
-                        <Path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
-                      </Svg>
-                    </Pressable>
                     {editMode && (
                       <Pressable
                         style={styles.editButton}
@@ -298,37 +255,42 @@ export default function CategoryScreen() {
             onRequestClose={closeLightbox}
           >
             <View style={styles.lightboxOverlay}>
+              <TouchableOpacity
+                style={styles.lightboxClose}
+                onPress={() => setLightboxVisible(false)}
+              >
+                <Svg
+                  width={24}
+                  height={24}
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="#fff"
+                  strokeWidth="2"
+                >
+                  <Path d="M18 6L6 18M6 6l12 12" />
+                </Svg>
+              </TouchableOpacity>
               <View style={styles.lightboxContent}>
-                {/* Top: Close button */}
-                <View style={styles.lightboxTopRow}>
-                  <View style={{ flex: 1 }} />
-                  <Pressable style={styles.lightboxClose} onPress={closeLightbox}>
-                    <Svg width={24} height={24} viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2">
-                      <Path d="M18 6L6 18M6 6l12 12" />
-                    </Svg>
-                  </Pressable>
-                </View>
 
-                {/* Middle: Image (centered) */}
-                <View style={[styles.lightboxImageWrap, { backgroundColor: '#000' }]}> 
-                  {/* DEBUG: use plain View instead of ScrollView to ensure image renders */}
+                <View style={styles.lightboxImageWrap}>
                   <View style={styles.lightboxScrollView}>
                     {jewelleryItems[lightboxIndex] ? (
                       <Image
-                        key={`lightbox-img-${lightboxIndex}-${jewelleryItems[lightboxIndex].imgId || ''}`}
+                        key={`lightbox-img-${lightboxIndex}-${jewelleryItems[lightboxIndex].imgId || ""
+                          }`}
                         source={{ uri: jewelleryItems[lightboxIndex].image }}
-                        style={[styles.lightboxImage, { borderWidth: 1, borderColor: '#fff' }]}
+                        style={styles.lightboxImage}
                       />
                     ) : (
-                      <Text style={{ color: Colors.white }}>No image to display</Text>
+                      <Text style={{ color: Colors.white }}>
+                        No image to display
+                      </Text>
                     )}
                   </View>
                 </View>
-
-                {/* Bottom: Details + navigation arrows beside details */}
                 <View style={styles.lightboxDetailsRow}>
                   <Pressable onPress={showPrev} style={styles.detailsNavButton}>
-                    <Svg width={28} height={28} viewBox="0 0 24 24" fill="none" stroke={Colors.primary} strokeWidth="2">
+                    <Svg width={32} height={32} viewBox="0 0 24 24" fill="none" stroke={Colors.white} strokeWidth="2">
                       <Path d="M15 18l-6-6 6-6" />
                     </Svg>
                   </Pressable>
@@ -339,13 +301,13 @@ export default function CategoryScreen() {
                         <Text style={styles.lightboxTitle}>{jewelleryItems[lightboxIndex].name}</Text>
                         <View style={styles.lightboxDetailChips}>
                           {jewelleryItems[lightboxIndex].metal ? (
-                            <View style={styles.detailChip}><Text style={styles.detailChipText}>{jewelleryItems[lightboxIndex].metal}</Text></View>
+                            <View style={styles.detailChip}><Text style={styles.detailChipText}>Metal: {jewelleryItems[lightboxIndex].metal}</Text></View>
                           ) : null}
                           {jewelleryItems[lightboxIndex].weight ? (
-                            <View style={styles.detailChip}><Text style={styles.detailChipText}>{jewelleryItems[lightboxIndex].weight}</Text></View>
+                            <View style={styles.detailChip}><Text style={styles.detailChipText}>Weight: {jewelleryItems[lightboxIndex].weight}</Text></View>
                           ) : null}
                           {jewelleryItems[lightboxIndex].carat ? (
-                            <View style={styles.detailChip}><Text style={styles.detailChipText}>{jewelleryItems[lightboxIndex].carat}</Text></View>
+                            <View style={styles.detailChip}><Text style={styles.detailChipText}>Carat: {jewelleryItems[lightboxIndex].carat}</Text></View>
                           ) : null}
                           {jewelleryItems[lightboxIndex].imgId ? (
                             <View style={styles.detailChip}><Text style={styles.detailChipText}>ID: {jewelleryItems[lightboxIndex].imgId}</Text></View>
@@ -356,7 +318,7 @@ export default function CategoryScreen() {
                   </View>
 
                   <Pressable onPress={showNext} style={styles.detailsNavButton}>
-                    <Svg width={28} height={28} viewBox="0 0 24 24" fill="none" stroke={Colors.primary} strokeWidth="2">
+                    <Svg width={32} height={32} viewBox="0 0 24 24" fill="none" stroke={Colors.white} strokeWidth="2">
                       <Path d="M9 6l6 6-6 6" />
                     </Svg>
                   </Pressable>
@@ -375,7 +337,7 @@ export default function CategoryScreen() {
         animationType="fade"
         onRequestClose={closeEditModal}
       >
-        <View style={styles.modalOverlay}>
+        <View style={styles.editPopupOverlay}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Edit Jewellery</Text>
@@ -518,13 +480,8 @@ const styles = StyleSheet.create({
     paddingTop: 50,
     paddingBottom: Spacing.lg,
   },
-  backButton: {
-    padding: 5,
-    backgroundColor: "#f5dfcbff",
-    borderRadius: 3,
-  },
   headerTitle: {
-    fontSize: FontSizes.xlarge,
+    fontSize: isMobile ? FontSizes.large : FontSizes.xlarge,
     fontWeight: "bold",
     color: Colors.text,
   },
@@ -533,24 +490,13 @@ const styles = StyleSheet.create({
     gap: Spacing.sm,
     alignItems: "center",
   },
-  wishlistButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    backgroundColor: "#f5dfcbff",
-    borderRadius: 6,
-  },
-  wishlistText: {
-    fontSize: FontSizes.medium,
-    fontWeight: "600",
-    color: Colors.primary,
-  },
   actionButton: {
     padding: 8,
-    backgroundColor: "#f5dfcbff",
+    backgroundColor: Colors.primary,
     borderRadius: 6,
   },
   actionButtonActive: {
-    backgroundColor: Colors.background,
+    backgroundColor: Colors.primary,
   },
   scrollView: {
     flex: 1,
@@ -581,7 +527,6 @@ const styles = StyleSheet.create({
     gap: 15,
   },
   gridItem: {
-    // 2 per row on mobile, 3 per row on tablet, 4 per row on wide screens
     flexBasis: isWide ? "23%" : isTablet ? "31%" : "48%",
     minWidth: isMobile ? 120 : 160,
     flexGrow: 1,
@@ -599,10 +544,11 @@ const styles = StyleSheet.create({
     resizeMode: "cover",
   },
   cardContent: {
-    padding: Spacing.md,
+    paddingLeft: 15,
+    paddingTop: 7,
   },
   cardTitle: {
-    fontSize: FontSizes.large,
+    fontSize: isMobile ? FontSizes.medium : FontSizes.large,
     fontWeight: "bold",
     color: Colors.text,
     marginBottom: Spacing.xs,
@@ -614,25 +560,6 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     marginBottom: 4,
   },
-  cardDetail: {
-    fontSize: FontSizes.small,
-    color: Colors.border,
-    marginTop: 4,
-    fontWeight: 600,
-  },
-  likeButton: {
-    position: "absolute",
-    top: 10,
-    right: 10,
-    backgroundColor: Colors.white,
-    borderRadius: 20,
-    padding: 6,
-    elevation: 2,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.2,
-    shadowRadius: 2,
-  },
   editButton: {
     position: "absolute",
     top: 10,
@@ -640,13 +567,8 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.white,
     borderRadius: 20,
     padding: 6,
-    elevation: 2,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.2,
-    shadowRadius: 2,
   },
-  modalOverlay: {
+  editPopupOverlay: {
     flex: 1,
     backgroundColor: "rgba(0, 0, 0, 0.5)",
     justifyContent: "center",
@@ -656,79 +578,51 @@ const styles = StyleSheet.create({
   /* Lightbox styles */
   lightboxOverlay: {
     flex: 1,
-    // 20% transparent background
-    backgroundColor: "rgba(0,0,0,0.2)",
+    backgroundColor: "#160800e1",
     justifyContent: "center",
     alignItems: "center",
-    padding: Spacing.lg,
   },
   lightboxContent: {
-    width: '95%',
-    maxWidth: 1200,
-    maxHeight: '90%',
-    // make content taller so image can occupy more vertical space
-    height: '85%',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  lightboxTopRow: {
-    width: '100%',
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
-    paddingBottom: Spacing.sm,
+    width: "100%",
+    height: "100%",
+    alignItems: "center",
+    justifyContent: "center",
   },
   lightboxClose: {
-    position: 'absolute',
+    position: "absolute",
     top: 12,
     right: 12,
     zIndex: 20,
-    padding: 8,
+    padding: 5,
+    backgroundColor: Colors.primary,
+    borderRadius: 5,
   },
   lightboxImageWrap: {
     flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    width: isMobile ? '100%' : '60%',
-    maxWidth: 900,
-    // explicit height so child Image with height:100% can fill available space
-    height: isMobile ? '50%' : '65%',
-    position: 'relative',
-  },
-  lightboxNavLeft: {
-    position: 'absolute',
-    left: 6,
-    top: '50%',
-    marginTop: -24,
-    zIndex: 15,
-    padding: 6,
-  },
-  lightboxNavRight: {
-    position: 'absolute',
-    right: 6,
-    top: '50%',
-    marginTop: -24,
-    zIndex: 15,
-    padding: 6,
+    alignItems: "center",
+    justifyContent: "center",
+    width: "100%",
+    position: "relative",
+    margin: 10
   },
   lightboxScroll: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    width: '100%',
+    alignItems: "center",
+    justifyContent: "center",
+    width: "100%",
   },
   lightboxScrollView: {
-    width: '100%',
-    height: '100%',
+    width: "100%",
+    height: "100%",
   },
   lightboxImage: {
-    // make image fill the available height inside its wrapper while preserving aspect ratio
-    width: '100%',
-    height: '100%',
-    resizeMode: 'contain',
+    width: "100%",
+    height: "100%",
+    resizeMode: "contain",
   },
   lightboxDetails: {
-    width: isMobile ? '100%' : '35%',
+    width: isMobile ? "100%" : "35%",
     padding: Spacing.lg,
-    backgroundColor: 'transparent',
+    backgroundColor: "transparent",
   },
   lightboxDetailsRow: {
     width: '100%',
@@ -738,7 +632,10 @@ const styles = StyleSheet.create({
     marginTop: Spacing.md,
   },
   detailsNavButton: {
-    padding: 8,
+    padding: 2,
+    backgroundColor: Colors.primary,
+    margin: Spacing.xs,
+    borderRadius: 5,
   },
   lightboxDetailsCenter: {
     flex: 1,
@@ -749,10 +646,10 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     justifyContent: 'center',
     gap: 8,
-    marginTop: Spacing.sm,
+    margin: Spacing.sm,
   },
   detailChip: {
-    backgroundColor: Colors.white,
+    backgroundColor: Colors.secondary,
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 12,
@@ -770,8 +667,8 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.md,
   },
   lightboxTitle: {
-    fontSize: FontSizes.large,
-    fontWeight: '700',
+    fontSize: isMobile ? FontSizes.large : FontSizes.xlarge,
+    fontWeight: '600',
     color: Colors.white,
     maxWidth: '80%'
   },
@@ -800,16 +697,11 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     padding: Spacing.lg,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.background,
   },
   modalTitle: {
     fontSize: FontSizes.xlarge,
     fontWeight: "bold",
     color: Colors.text,
-  },
-  closeButton: {
-    padding: 4,
   },
   modalBody: {
     padding: Spacing.lg,

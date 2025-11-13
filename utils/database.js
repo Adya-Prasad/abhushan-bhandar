@@ -3,6 +3,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 const JEWELLERY_KEY = "@jewellery_items";
 const CATEGORIES_KEY = "@custom_categories";
 const IMG_COUNTER_KEY = "@img_counter";
+const WISHLISTS_KEY = "@wishlists";
 
 // Get next image ID
 const getNextImgId = async () => {
@@ -198,6 +199,53 @@ export const updateCategory = async (categoryId, updatedData) => {
     return true;
   } catch (error) {
     console.error("Error updating category:", error);
+    throw error;
+  }
+};
+
+// Wishlists Management
+export const saveWishlist = async (wishlist) => {
+  try {
+    const existingWishlists = await getWishlists();
+    const newWishlist = {
+      id: Date.now().toString(),
+      ...wishlist,
+      createdAt: new Date().toISOString(),
+    };
+    const updatedWishlists = [...existingWishlists, newWishlist];
+    await AsyncStorage.setItem(WISHLISTS_KEY, JSON.stringify(updatedWishlists));
+    return newWishlist;
+  } catch (error) {
+    console.error("Error saving wishlist:", error);
+    throw error;
+  }
+};
+
+export const getWishlists = async () => {
+  try {
+    const wishlists = await AsyncStorage.getItem(WISHLISTS_KEY);
+    const parsed = wishlists ? JSON.parse(wishlists) : [];
+    // Return in LIFO order (most recent first)
+    return parsed.reverse();
+  } catch (error) {
+    console.error("Error getting wishlists:", error);
+    return [];
+  }
+};
+
+export const deleteWishlist = async (wishlistId) => {
+  try {
+    const existingWishlists = await getWishlists();
+    const updatedWishlists = existingWishlists.filter(
+      (wishlist) => wishlist.id !== wishlistId
+    );
+    await AsyncStorage.setItem(
+      WISHLISTS_KEY,
+      JSON.stringify(updatedWishlists.reverse())
+    );
+    return true;
+  } catch (error) {
+    console.error("Error deleting wishlist:", error);
     throw error;
   }
 };

@@ -175,7 +175,7 @@ export default function AddScreen() {
             height={24}
             viewBox="0 0 24 24"
             fill="none"
-            stroke={Colors.primary}
+            stroke={Colors.white}
             strokeWidth="2"
           >
             <Path d="M19 12H5M12 19l-7-7 7-7" />
@@ -476,8 +476,9 @@ const styles = StyleSheet.create({
   },
   backButton: {
     padding: 5,
-    backgroundColor: "#f5dfcbff",
+    backgroundColor: Colors.primary,
     borderRadius: 3,
+    margin:2,
   },
   headerTitle: {
     fontSize: FontSizes.xlarge,
@@ -534,7 +535,7 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.sm,
   },
   required: {
-    color: "#e74c3c",
+    color: Colors.red,
   },
   input: {
     borderRadius: 8,
