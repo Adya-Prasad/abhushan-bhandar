@@ -1,9 +1,10 @@
 import { useFocusEffect } from "@react-navigation/native";
 import * as ImagePicker from "expo-image-picker";
 import { router } from "expo-router";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   Alert,
+  Dimensions,
   Image,
   Pressable,
   ScrollView,
@@ -24,6 +25,17 @@ import {
 export default function AddScreen() {
   const [activeTab, setActiveTab] = useState("jewellery");
   const [categories, setCategories] = useState([]);
+  const [dimensions, setDimensions] = useState(Dimensions.get("window"));
+
+  useEffect(() => {
+    const subscription = Dimensions.addEventListener("change", ({ window }) => {
+      setDimensions(window);
+    });
+    return () => subscription?.remove();
+  }, []);
+
+  const { width } = dimensions;
+  const isMobile = width < 768;
 
   // Category form state
   const [categoryName, setCategoryName] = useState("");
@@ -59,8 +71,7 @@ export default function AddScreen() {
   const pickImage = async (type) => {
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ["images"],
-      allowsEditing: true,
-      aspect: [1, 1],
+      allowsEditing: false,
       quality: 0.8,
       base64: true,
     });
@@ -181,7 +192,12 @@ export default function AddScreen() {
             <Path d="M19 12H5M12 19l-7-7 7-7" />
           </Svg>
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Add New Jewellery or Category</Text>
+        <Text style={[
+          styles.headerTitle,
+          { fontSize: isMobile ? FontSizes.medium : FontSizes.xlarge }
+        ]}>
+          Add New Jewellery or Category
+        </Text>
         <View style={styles.placeholder} />
       </View>
 
@@ -475,15 +491,15 @@ const styles = StyleSheet.create({
     paddingBottom: Spacing.lg,
   },
   backButton: {
-    padding: 5,
+    padding: 8,
     backgroundColor: Colors.primary,
     borderRadius: 3,
     margin:2,
   },
   headerTitle: {
-    fontSize: FontSizes.xlarge,
     fontWeight: "bold",
     color: Colors.text,
+    marginLeft: 10,
   },
   placeholder: {
     width: 34,
@@ -506,7 +522,7 @@ const styles = StyleSheet.create({
   },
   tabText: {
     fontSize: FontSizes.medium,
-    color: Colors.border,
+    color: Colors.white,
     fontWeight: "600",
   },
   activeTabText: {
@@ -545,11 +561,11 @@ const styles = StyleSheet.create({
     color: Colors.text,
     backgroundColor: Colors.white,
     borderWidth: 2,
-    borderColor: Colors.secondary,
+    borderColor: Colors.border,
   },
   imagePicker: {
     borderWidth: 2,
-    borderColor: Colors.secondary,
+    borderColor: Colors.border,
     borderStyle: "dashed",
     borderRadius: 8,
     height: 200,
@@ -580,7 +596,7 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.md,
     backgroundColor: Colors.white,
     borderWidth: 2,
-    borderColor: Colors.secondary,
+    borderColor: Colors.border,
   },
   dropdownButtonText: {
     fontSize: FontSizes.medium,

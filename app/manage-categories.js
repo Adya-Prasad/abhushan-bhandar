@@ -1,9 +1,10 @@
 import { useFocusEffect } from "@react-navigation/native";
 import * as ImagePicker from "expo-image-picker";
 import { router } from "expo-router";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   Alert,
+  Dimensions,
   Image,
   Modal,
   Pressable,
@@ -14,12 +15,22 @@ import {
   View
 } from "react-native";
 import Svg, { Path } from "react-native-svg";
-import { Colors } from "../constants/theme";
+import { Colors, FontSizes } from "../constants/theme";
 import { deleteCategory, getAllCategories, getJewelleryByCategory, updateCategory } from "../utils/database";
 
 export default function ManageCategoriesScreen() {
-// ...existing code...
   const [categories, setCategories] = useState([]);
+  const [dimensions, setDimensions] = useState(Dimensions.get("window"));
+
+  useEffect(() => {
+    const subscription = Dimensions.addEventListener("change", ({ window }) => {
+      setDimensions(window);
+    });
+    return () => subscription?.remove();
+  }, []);
+
+  const { width } = dimensions;
+  const isMobile = width < 768;
   const [isLoading, setIsLoading] = useState(true);
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
   const [editModalVisible, setEditModalVisible] = useState(false);
@@ -183,13 +194,18 @@ export default function ManageCategoriesScreen() {
             height={24}
             viewBox="0 0 24 24"
             fill="none"
-            stroke={Colors.primary}
+            stroke={Colors.white}
             strokeWidth="2"
           >
             <Path d="M19 12H5M12 19l-7-7 7-7" />
           </Svg>
         </Pressable>
-        <Text style={styles.headerTitle}>Manage Categories</Text>
+        <Text style={[
+          styles.headerTitle,
+          { fontSize: isMobile ? FontSizes.medium : FontSizes.xlarge }
+        ]}>
+          Manage Categories
+        </Text>
         <View style={styles.placeholder} />
       </View>
 
@@ -205,7 +221,7 @@ export default function ManageCategoriesScreen() {
         ) : (
           <>
             <Text style={styles.subtitle}>
-              Manage your jewellery categories. The Archive category contains all items.
+              Manage your jewellery categories. You can edit and delete it here.
             </Text>
             {categories.map((category) => (
               <View key={category.id || 'archive'} style={styles.categoryCard}>
@@ -267,8 +283,13 @@ export default function ManageCategoriesScreen() {
             >
               <View style={styles.modalOverlay}>
                 <View style={styles.modalContent}>
-                  <View style={styles.modalHeader}>
-                    <Text style={styles.modalTitle}>Delete Category</Text>
+                    <View style={styles.modalHeader}>
+                    <Text style={[
+                      styles.modalTitle,
+                      { fontSize: isMobile ? FontSizes.large : FontSizes.xlarge }
+                    ]}>
+                      Delete Category
+                    </Text>
                     <Pressable onPress={closeDeleteModal} style={styles.closeButton}>
                       <Svg
                         width={24}
@@ -285,10 +306,25 @@ export default function ManageCategoriesScreen() {
                   <View style={styles.modalBody}>
                     {selectedCategory && (
                       <>
-                        <Text style={styles.modalLabel}>Are you sure you want to delete <Text style={{fontWeight:'bold'}}>{selectedCategory.name}</Text>?</Text>
-                        <Text style={styles.modalSubtext}>All {selectedCategory.itemCount} items will remain in Archive.</Text>
+                        <Text style={[
+                          styles.modalLabel,
+                          { fontSize: isMobile ? FontSizes.medium : FontSizes.large }
+                        ]}>
+                          Are you sure you want to delete <Text style={{fontWeight:'bold'}}>{selectedCategory.name}</Text>?
+                        </Text>
+                        <Text style={[
+                          styles.modalSubtext,
+                          { fontSize: isMobile ? FontSizes.small : FontSizes.medium }
+                        ]}>
+                          All {selectedCategory.itemCount} items will remain in Archive.
+                        </Text>
                         {deleteError ? (
-                          <Text style={styles.modalError}>{deleteError}</Text>
+                          <Text style={[
+                            styles.modalError,
+                            { fontSize: isMobile ? FontSizes.small : FontSizes.medium }
+                          ]}>
+                            {deleteError}
+                          </Text>
                         ) : null}
                       </>
                     )}
@@ -299,14 +335,24 @@ export default function ManageCategoriesScreen() {
                       onPress={closeDeleteModal}
                       disabled={deleteLoading}
                     >
-                      <Text style={styles.cancelButtonText}>Cancel</Text>
+                      <Text style={[
+                        styles.cancelButtonText,
+                        { fontSize: isMobile ? FontSizes.medium : FontSizes.large }
+                      ]}>
+                        Cancel
+                      </Text>
                     </TouchableOpacity>
                     <TouchableOpacity
                       style={styles.confirmDeleteButton}
                       onPress={confirmDeleteCategory}
                       disabled={deleteLoading}
                     >
-                      <Text style={styles.confirmDeleteButtonText}>{deleteLoading ? "Deleting..." : "Delete"}</Text>
+                      <Text style={[
+                        styles.confirmDeleteButtonText,
+                        { fontSize: isMobile ? FontSizes.medium : FontSizes.large }
+                      ]}>
+                        {deleteLoading ? "Deleting..." : "Delete"}
+                      </Text>
                     </TouchableOpacity>
                   </View>
                 </View>
@@ -323,7 +369,12 @@ export default function ManageCategoriesScreen() {
               <View style={styles.modalOverlay}>
                 <View style={styles.modalContent}>
                   <View style={styles.modalHeader}>
-                    <Text style={styles.modalTitle}>Edit Category</Text>
+                    <Text style={[
+                      styles.modalTitle,
+                      { fontSize: isMobile ? FontSizes.large : FontSizes.xlarge }
+                    ]}>
+                      Edit Category
+                    </Text>
                     <Pressable onPress={closeEditModal} style={styles.closeButton}>
                       <Svg
                         width={24}
@@ -340,15 +391,28 @@ export default function ManageCategoriesScreen() {
                   <View style={styles.modalBody}>
                     {selectedCategory && (
                       <>
-                        <Text style={styles.modalLabel}>Category Name</Text>
+                        <Text style={[
+                          styles.modalLabel,
+                          { fontSize: isMobile ? FontSizes.medium : FontSizes.large }
+                        ]}>
+                          Category Name
+                        </Text>
                         <TextInput
-                          style={styles.modalInput}
+                          style={[
+                            styles.modalInput,
+                            { fontSize: isMobile ? FontSizes.medium : FontSizes.medium }
+                          ]}
                           value={editName}
                           onChangeText={setEditName}
                           placeholder="Enter category name"
                           placeholderTextColor={Colors.border}
                         />
-                        <Text style={[styles.modalLabel, { marginTop: 20 }]}>Category Icon</Text>
+                        <Text style={[
+                          styles.modalLabel,
+                          { marginTop: 20, fontSize: isMobile ? FontSizes.medium : FontSizes.large }
+                        ]}>
+                          Category Icon
+                        </Text>
                         <View style={styles.iconContainer}>
                           <Image
                             source={{ uri: editIcon }}
@@ -371,7 +435,12 @@ export default function ManageCategoriesScreen() {
                           </TouchableOpacity>
                         </View>
                         {editError ? (
-                          <Text style={styles.modalError}>{editError}</Text>
+                          <Text style={[
+                            styles.modalError,
+                            { fontSize: isMobile ? FontSizes.small : FontSizes.medium }
+                          ]}>
+                            {editError}
+                          </Text>
                         ) : null}
                       </>
                     )}
@@ -382,14 +451,24 @@ export default function ManageCategoriesScreen() {
                       onPress={closeEditModal}
                       disabled={editLoading}
                     >
-                      <Text style={styles.cancelButtonText}>Cancel</Text>
+                      <Text style={[
+                        styles.cancelButtonText,
+                        { fontSize: isMobile ? FontSizes.medium : FontSizes.large }
+                      ]}>
+                        Cancel
+                      </Text>
                     </TouchableOpacity>
                     <TouchableOpacity
                       style={styles.confirmDeleteButton}
                       onPress={confirmEditCategory}
                       disabled={editLoading}
                     >
-                      <Text style={styles.confirmDeleteButtonText}>{editLoading ? "Saving..." : "Save"}</Text>
+                      <Text style={[
+                        styles.confirmDeleteButtonText,
+                        { fontSize: isMobile ? FontSizes.medium : FontSizes.large }
+                      ]}>
+                        {editLoading ? "Saving..." : "Save"}
+                      </Text>
                     </TouchableOpacity>
                   </View>
                 </View>
@@ -415,12 +494,11 @@ const styles = {
     paddingBottom: 24,
   },
   backButton: {
-    padding: 5,
-    backgroundColor: "#f5dfcbff",
-    borderRadius: 3,
+    padding: 8,
+    backgroundColor: Colors.primary,
+    borderRadius: 6,
   },
   headerTitle: {
-    fontSize: 24,
     fontWeight: "bold",
     color: Colors.text,
   },
@@ -434,7 +512,7 @@ const styles = {
     padding: 24,
   },
   subtitle: {
-    fontSize: 18,
+    fontSize: FontSizes.medium,
     color: Colors.text,
     marginBottom: 32,
     textAlign: "center",
@@ -477,13 +555,13 @@ const styles = {
     flex: 1,
   },
   categoryName: {
-    fontSize: 20,
+    fontSize: FontSizes.medium,
     fontWeight: "600",
     color: Colors.text,
     marginBottom: 4,
   },
   itemCount: {
-    fontSize: 14,
+    fontSize: FontSizes.small,
     color: Colors.border,
     fontWeight: "500",
   },
@@ -522,7 +600,6 @@ const styles = {
     borderBottomColor: Colors.background,
   },
   modalTitle: {
-    fontSize: 24,
     fontWeight: "bold",
     color: Colors.text,
   },
@@ -533,20 +610,17 @@ const styles = {
     padding: 24,
   },
   modalLabel: {
-    fontSize: 18,
     fontWeight: "600",
     color: Colors.text,
     marginBottom: 12,
   },
   modalSubtext: {
-    fontSize: 16,
     color: Colors.border,
     marginBottom: 12,
     textAlign: "center",
   },
   modalError: {
     color: "#e74c3c",
-    fontSize: 16,
     marginBottom: 12,
     textAlign: "center",
   },
@@ -554,7 +628,6 @@ const styles = {
     borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 10,
-    fontSize: 16,
     color: Colors.text,
     backgroundColor: Colors.white,
     borderWidth: 1,
@@ -606,7 +679,6 @@ const styles = {
   },
   cancelButtonText: {
     color: Colors.white,
-    fontSize: 18,
     fontWeight: "bold",
   },
   confirmDeleteButton: {
@@ -618,7 +690,6 @@ const styles = {
   },
   confirmDeleteButtonText: {
     color: Colors.white,
-    fontSize: 18,
     fontWeight: "bold",
   },
 };

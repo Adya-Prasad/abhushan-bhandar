@@ -108,8 +108,8 @@ export default function WishlistsScreen() {
           style={styles.backButton}
         >
           <Svg
-            width={20}
-            height={20}
+            width={24}
+            height={24}
             viewBox="0 0 24 24"
             fill="none"
             stroke={Colors.white}
@@ -126,7 +126,7 @@ export default function WishlistsScreen() {
         {/* Wishlists List */}
         <View style={styles.listSection}>
           {wishlists.length === 0 ? (
-            <View style={styles.emptyState}>
+            <View style={styles.emptyWishlist}>
               <Svg
                 width={60}
                 height={60}
@@ -137,7 +137,7 @@ export default function WishlistsScreen() {
               >
                 <Path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
               </Svg>
-              <Text style={styles.wishlistText}>No wishlists yet, please create one</Text>
+              <Text style={styles.emptyWishlist}>No wishlists yet, please create one</Text>
             </View>
           ) : (
             wishlists.map((wishlist) => (
@@ -315,11 +315,11 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     paddingHorizontal: Spacing.lg,
-    paddingTop: Spacing.md,
+    paddingTop: 50,
     paddingBottom: Spacing.md,
   },
   backButton: {
-    padding: 4,
+    padding: 8,
     backgroundColor: Colors.primary,
     borderRadius: 3,
   },
@@ -327,6 +327,51 @@ const styles = StyleSheet.create({
     fontSize: FontSizes.xlarge,
     fontWeight: "bold",
     color: Colors.text,
+  },
+  listSection: {
+    padding: Spacing.lg,
+    borderBottomWidth: 1,
+    borderColor: Colors.primary,
+  },
+  emptyWishlist: {
+    alignItems: "center",
+    paddingVertical: 60,
+    fontSize: FontSizes.medium,
+    fontWeight: "600",
+    color: Colors.text,
+  },
+  wishlistCard: {
+    backgroundColor: Colors.white,
+    borderRadius: 12,
+    padding: Spacing.lg,
+    marginBottom: Spacing.md,
+  },
+  wishlistHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: Spacing.xs,
+  },
+  wishlistCustomerName: {
+    fontSize: FontSizes.large,
+    fontWeight: "700",
+    color: Colors.text,
+  },
+  wishlistText: {
+    fontSize: FontSizes.medium,
+    fontWeight: "600",
+    color: Colors.text,
+    borderBottomWidth: 1,
+    borderColor: Colors.secondary,
+    paddingBottom: Spacing.sm,
+  },
+  wishlistBody: {
+    gap: Spacing.xs,
+  },
+  wishlistDate: {
+    fontSize: FontSizes.small,
+    color: Colors.text,
+    fontStyle: "italic",
   },
 
   formTitle: {
@@ -436,46 +481,5 @@ const styles = StyleSheet.create({
     fontSize: FontSizes.large,
     fontWeight: "bold",
   },
-  listSection: {
-    padding: Spacing.lg,
-    borderBottomWidth: 1,
-    borderColor: Colors.primary,
-  },
-  emptyState: {
-    alignItems: "center",
-    paddingVertical: 60,
-  },
-  wishlistCard: {
-    backgroundColor: Colors.white,
-    borderRadius: 12,
-    padding: Spacing.lg,
-    marginBottom: Spacing.md,
-  },
-  wishlistHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: Spacing.xs,
-  },
-  wishlistCustomerName: {
-    fontSize: FontSizes.large,
-    fontWeight: "700",
-    color: Colors.text,
-  },
-  wishlistText: {
-    fontSize: FontSizes.medium,
-    fontWeight: "600",
-    color: Colors.text,
-    borderBottomWidth: 1,
-    borderColor: Colors.secondary,
-    paddingBottom: Spacing.sm,
-  },
-  wishlistBody: {
-    gap: Spacing.xs,
-  },
-  wishlistDate: {
-    fontSize: FontSizes.small,
-    color: Colors.text,
-    fontStyle: "italic",
-  },
+  
 });

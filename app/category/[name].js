@@ -1,8 +1,9 @@
 import { useFocusEffect } from "@react-navigation/native";
 import { router, useLocalSearchParams } from "expo-router";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Alert,
+  Animated,
   Dimensions,
   Image,
   Modal,
@@ -14,6 +15,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { GestureHandlerRootView, PanGestureHandler, PinchGestureHandler, State } from "react-native-gesture-handler";
 import Svg, { Path } from "react-native-svg";
 import { Colors, FontSizes, Spacing } from "../../constants/theme";
 import {
@@ -22,17 +24,34 @@ import {
   updateJewelleryItem,
 } from "../../utils/database";
 
-const { width } = Dimensions.get("window");
-// Breakpoints: mobile, tablet, wide
-const isMobile = width < 600; // phones
-const isTablet = width >= 600 && width < 1024; // tablets
-const isWide = width >= 1024; // large / desktop
+// Module-level breakpoints for StyleSheet (initial load)
+const { width: initialWidth } = Dimensions.get("window");
+const isMobileInitial = initialWidth < 768;
 
 export default function CategoryScreen() {
   const { name } = useLocalSearchParams();
   const categoryName = name.charAt(0).toUpperCase() + name.slice(1);
   const [jewelleryItems, setJewelleryItems] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [dimensions, setDimensions] = useState(Dimensions.get("window"));
+
+  useEffect(() => {
+    const subscription = Dimensions.addEventListener("change", ({ window }) => {
+      setDimensions(window);
+    });
+    return () => subscription?.remove();
+  }, []);
+
+  const { width } = dimensions;
+  const isMobile = width < 768;
+  const isTablet = width >= 768 && width < 1024;
+
+  // Calculate items per row: 2 on mobile, 3 on tablet, 4 on desktop
+  const itemsPerRow = isMobile ? 2 : isTablet ? 3 : 4;
+  const horizontalPadding = isMobile ? Spacing.sm * 2 : Spacing.lg * 2;
+  const itemMargin = 6; // margin on each side = 12 total per item
+  const totalMarginSpace = itemMargin * 2 * itemsPerRow;
+  const gridItemWidth = (width - horizontalPadding - totalMarginSpace) / itemsPerRow;
   const [editMode, setEditMode] = useState(false);
   const [editModalVisible, setEditModalVisible] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
@@ -44,6 +63,15 @@ export default function CategoryScreen() {
   // Lightbox state
   const [lightboxVisible, setLightboxVisible] = useState(false);
   const [lightboxIndex, setLightboxIndex] = useState(0);
+  
+  // Zoom state
+  const scale = useRef(new Animated.Value(1)).current;
+  const translateX = useRef(new Animated.Value(0)).current;
+  const translateY = useRef(new Animated.Value(0)).current;
+  const lastScale = useRef(1);
+  const lastTranslate = useRef({ x: 0, y: 0 });
+  const pinchRef = useRef(null);
+  const panRef = useRef(null);
 
   const loadJewellery = useCallback(async () => {
     try {
@@ -72,21 +100,121 @@ export default function CategoryScreen() {
     setEditModalVisible(true);
   };
 
+  const resetZoom = () => {
+    Animated.parallel([
+      Animated.spring(scale, {
+        toValue: 1,
+        useNativeDriver: true,
+      }),
+      Animated.spring(translateX, {
+        toValue: 0,
+        useNativeDriver: true,
+      }),
+      Animated.spring(translateY, {
+        toValue: 0,
+        useNativeDriver: true,
+      }),
+    ]).start();
+    lastScale.current = 1;
+    lastTranslate.current = { x: 0, y: 0 };
+  };
+
   const openLightbox = (index) => {
     setLightboxIndex(index);
     setLightboxVisible(true);
+    // Reset zoom when opening
+    resetZoom();
   };
 
   const closeLightbox = () => {
     setLightboxVisible(false);
+    resetZoom();
+  };
+
+  const onPinchGestureEvent = (event) => {
+    const pinchScale = event.nativeEvent.scale;
+    const newScale = lastScale.current * pinchScale;
+    // Limit zoom between 1x and 4x
+    const clampedScale = Math.max(1, Math.min(4, newScale));
+    scale.setValue(clampedScale);
+  };
+
+  const onPinchHandlerStateChange = (event) => {
+    if (event.nativeEvent.oldState === State.ACTIVE) {
+      let newScale = lastScale.current * event.nativeEvent.scale;
+      // Limit zoom between 1x and 4x
+      if (newScale < 1) {
+        newScale = 1;
+      } else if (newScale > 4) {
+        newScale = 4;
+      }
+      lastScale.current = newScale;
+      scale.setValue(newScale);
+    }
+  };
+
+  const onPanGestureEvent = (event) => {
+    // Only allow panning when zoomed in
+    if (lastScale.current > 1) {
+      const newX = lastTranslate.current.x + event.nativeEvent.translationX;
+      const newY = lastTranslate.current.y + event.nativeEvent.translationY;
+      
+      // Apply constraints to prevent panning too far
+      const maxTranslate = (lastScale.current - 1) * 150;
+      const clampedX = Math.max(-maxTranslate, Math.min(maxTranslate, newX));
+      const clampedY = Math.max(-maxTranslate, Math.min(maxTranslate, newY));
+      
+      translateX.setValue(clampedX);
+      translateY.setValue(clampedY);
+    }
+  };
+
+  const onPanHandlerStateChange = (event) => {
+    if (event.nativeEvent.oldState === State.ACTIVE) {
+      if (lastScale.current > 1) {
+        const newX = lastTranslate.current.x + event.nativeEvent.translationX;
+        const newY = lastTranslate.current.y + event.nativeEvent.translationY;
+        
+        // Apply constraints
+        const maxTranslate = (lastScale.current - 1) * 150;
+        lastTranslate.current = {
+          x: Math.max(-maxTranslate, Math.min(maxTranslate, newX)),
+          y: Math.max(-maxTranslate, Math.min(maxTranslate, newY)),
+        };
+        
+        translateX.setValue(lastTranslate.current.x);
+        translateY.setValue(lastTranslate.current.y);
+      } else {
+        // Reset translation when not zoomed
+        lastTranslate.current = { x: 0, y: 0 };
+        translateX.setValue(0);
+        translateY.setValue(0);
+      }
+    }
+  };
+
+  const handleDoubleTap = () => {
+    if (lastScale.current > 1) {
+      resetZoom();
+    } else {
+      Animated.parallel([
+        Animated.spring(scale, {
+          toValue: 2,
+          useNativeDriver: true,
+        }),
+      ]).start();
+      lastScale.current = 2;
+    }
   };
 
   const showPrev = () => {
     setLightboxIndex((i) => (i - 1 + jewelleryItems.length) % jewelleryItems.length);
+    resetZoom();
   };
 
   const showNext = () => {
     setLightboxIndex((i) => (i + 1) % jewelleryItems.length);
+    resetZoom();
   };
 
   const closeEditModal = () => {
@@ -194,23 +322,29 @@ export default function CategoryScreen() {
 
       <ScrollView
         style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[
+          styles.scrollContent,
+          { paddingHorizontal: isMobile ? Spacing.sm : Spacing.lg }
+        ]}
         showsVerticalScrollIndicator={false}
       >
         {loading ? (
           <Text style={styles.emptyText}>Loading...</Text>
         ) : jewelleryItems.length === 0 ? (
           <View style={styles.emptyContainer}>
-            <Text style={styles.emptyText}>No items yet</Text>
-            <Text style={styles.emptySubtext}>
-              Upload {categoryName.toLowerCase()} to showcase them here
-            </Text>
+            <Text style={styles.emptyText}>No jewellery image yet, Upload in {categoryName.toLowerCase()} to showcase them here</Text>
           </View>
         ) : (
           <>
           <View style={styles.gridContainer}>
             {jewelleryItems.map((item, idx) => (
-              <View key={item.id} style={styles.gridItem}>
+              <View 
+                key={item.id} 
+                style={[
+                  styles.gridItem,
+                  { width: Math.max(gridItemWidth, 120) }
+                ]}
+              >
                 <View style={styles.card}>
                   <Pressable onPress={() => openLightbox(idx)}>
                     <Image
@@ -254,40 +388,76 @@ export default function CategoryScreen() {
             animationType="fade"
             onRequestClose={closeLightbox}
           >
-            <View style={styles.lightboxOverlay}>
-              <TouchableOpacity
-                style={styles.lightboxClose}
-                onPress={() => setLightboxVisible(false)}
-              >
-                <Svg
-                  width={24}
-                  height={24}
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="#fff"
-                  strokeWidth="2"
+            <GestureHandlerRootView style={{ flex: 1 }}>
+              <View style={styles.lightboxOverlay}>
+                <TouchableOpacity
+                  style={styles.lightboxClose}
+                  onPress={() => setLightboxVisible(false)}
                 >
-                  <Path d="M18 6L6 18M6 6l12 12" />
-                </Svg>
-              </TouchableOpacity>
-              <View style={styles.lightboxContent}>
-
-                <View style={styles.lightboxImageWrap}>
-                  <View style={styles.lightboxScrollView}>
-                    {jewelleryItems[lightboxIndex] ? (
-                      <Image
-                        key={`lightbox-img-${lightboxIndex}-${jewelleryItems[lightboxIndex].imgId || ""
-                          }`}
-                        source={{ uri: jewelleryItems[lightboxIndex].image }}
-                        style={styles.lightboxImage}
-                      />
-                    ) : (
-                      <Text style={{ color: Colors.white }}>
-                        No image to display
-                      </Text>
-                    )}
+                  <Svg
+                    width={24}
+                    height={24}
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="#fff"
+                    strokeWidth="2"
+                  >
+                    <Path d="M18 6L6 18M6 6l12 12" />
+                  </Svg>
+                </TouchableOpacity>
+                <View style={styles.lightboxContent}>
+                  <View style={styles.lightboxImageWrap}>
+                    <PinchGestureHandler
+                      ref={pinchRef}
+                      onGestureEvent={onPinchGestureEvent}
+                      onHandlerStateChange={onPinchHandlerStateChange}
+                    >
+                      <Animated.View style={{ flex: 1 }}>
+                        <PanGestureHandler
+                          ref={panRef}
+                          onGestureEvent={onPanGestureEvent}
+                          onHandlerStateChange={onPanHandlerStateChange}
+                          minPointers={1}
+                          maxPointers={1}
+                          simultaneousHandlers={pinchRef}
+                          enabled={lastScale.current > 1}
+                        >
+                          <Animated.View
+                            style={[
+                              styles.lightboxScrollView,
+                              {
+                                transform: [
+                                  { scale: scale },
+                                  { translateX: translateX },
+                                  { translateY: translateY },
+                                ],
+                              },
+                            ]}
+                          >
+                            {jewelleryItems[lightboxIndex] ? (
+                              <Pressable 
+                                onPress={handleDoubleTap} 
+                                delayLongPress={200}
+                                style={{ width: "100%", height: "100%", alignItems: "center", justifyContent: "center" }}
+                              >
+                                <Image
+                                  key={`lightbox-img-${lightboxIndex}-${jewelleryItems[lightboxIndex].imgId || ""
+                                    }`}
+                                  source={{ uri: jewelleryItems[lightboxIndex].image }}
+                                  style={styles.lightboxImage}
+                                  resizeMode="contain"
+                                />
+                              </Pressable>
+                            ) : (
+                              <Text style={{ color: Colors.white }}>
+                                No image to display
+                              </Text>
+                            )}
+                          </Animated.View>
+                        </PanGestureHandler>
+                      </Animated.View>
+                    </PinchGestureHandler>
                   </View>
-                </View>
                 <View style={styles.lightboxDetailsRow}>
                   <Pressable onPress={showPrev} style={styles.detailsNavButton}>
                     <Svg width={32} height={32} viewBox="0 0 24 24" fill="none" stroke={Colors.white} strokeWidth="2">
@@ -325,6 +495,7 @@ export default function CategoryScreen() {
                 </View>
               </View>
             </View>
+            </GestureHandlerRootView>
           </Modal>
           </>
         )}
@@ -481,7 +652,7 @@ const styles = StyleSheet.create({
     paddingBottom: Spacing.lg,
   },
   headerTitle: {
-    fontSize: isMobile ? FontSizes.large : FontSizes.xlarge,
+    fontSize: isMobileInitial ? FontSizes.medium : FontSizes.xlarge,
     fontWeight: "bold",
     color: Colors.text,
   },
@@ -502,7 +673,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    padding: Spacing.lg,
+    paddingVertical: Spacing.lg,
   },
   emptyContainer: {
     flex: 1,
@@ -516,27 +687,20 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     textAlign: "center",
   },
-  emptySubtext: {
-    fontSize: FontSizes.medium,
-    color: Colors.border,
-    textAlign: "center",
-  },
   gridContainer: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 15,
+    justifyContent: "flex-start",
   },
   gridItem: {
-    flexBasis: isWide ? "23%" : isTablet ? "31%" : "48%",
-    minWidth: isMobile ? 120 : 160,
-    flexGrow: 1,
     margin: 6,
+    flexShrink: 0,
+    flexGrow: 0,
   },
   card: {
     backgroundColor: Colors.white,
     borderRadius: 12,
     overflow: "hidden",
-    elevation: 3,
   },
   cardImage: {
     width: "100%",
@@ -548,17 +712,17 @@ const styles = StyleSheet.create({
     paddingTop: 7,
   },
   cardTitle: {
-    fontSize: isMobile ? FontSizes.medium : FontSizes.large,
+    fontSize: isMobileInitial ? 14 : FontSizes.large,
     fontWeight: "bold",
     color: Colors.text,
-    marginBottom: Spacing.xs,
+    marginBottom: 2,
     alignItems: "center",
   },
   cardImgId: {
-    fontSize: FontSizes.small,
+    fontSize: 12,
     color: Colors.primary,
     fontWeight: "bold",
-    marginBottom: 4,
+    marginBottom: Spacing.xs,
   },
   editButton: {
     position: "absolute",
@@ -593,9 +757,9 @@ const styles = StyleSheet.create({
     top: 12,
     right: 12,
     zIndex: 20,
-    padding: 5,
+    padding: 8,
     backgroundColor: Colors.primary,
-    borderRadius: 5,
+    borderRadius: 6,
   },
   lightboxImageWrap: {
     flex: 1,
@@ -603,7 +767,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     width: "100%",
     position: "relative",
-    margin: 10
+    overflow: "hidden",
   },
   lightboxScroll: {
     alignItems: "center",
@@ -611,16 +775,17 @@ const styles = StyleSheet.create({
     width: "100%",
   },
   lightboxScrollView: {
+    flex: 1,
     width: "100%",
-    height: "100%",
+    alignItems: "center",
+    justifyContent: "center",
   },
   lightboxImage: {
-    width: "100%",
-    height: "100%",
-    resizeMode: "contain",
+    width: Dimensions.get("window").width,
+    height: Dimensions.get("window").height * 0.7,
   },
   lightboxDetails: {
-    width: isMobile ? "100%" : "35%",
+    width: isMobileInitial ? "100%" : "35%",
     padding: Spacing.lg,
     backgroundColor: "transparent",
   },
@@ -632,10 +797,10 @@ const styles = StyleSheet.create({
     marginTop: Spacing.md,
   },
   detailsNavButton: {
-    padding: 2,
+    padding: 8,
     backgroundColor: Colors.primary,
     margin: Spacing.xs,
-    borderRadius: 5,
+    borderRadius: 6,
   },
   lightboxDetailsCenter: {
     flex: 1,
@@ -667,7 +832,7 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.md,
   },
   lightboxTitle: {
-    fontSize: isMobile ? FontSizes.large : FontSizes.xlarge,
+    fontSize: isMobileInitial ? FontSizes.medium : FontSizes.xlarge,
     fontWeight: '600',
     color: Colors.white,
     maxWidth: '80%'
