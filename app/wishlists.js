@@ -4,6 +4,7 @@ import { useCallback, useState } from "react";
 import {
   Alert,
   Image,
+  Modal,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -42,6 +43,10 @@ export default function WishlistsScreen() {
   const [lightboxVisible, setLightboxVisible] = useState(false);
   const [lightboxImages, setLightboxImages] = useState([]);
   const [lightboxIndex, setLightboxIndex] = useState(0);
+  
+  // Delete confirmation state
+  const [deleteConfirmVisible, setDeleteConfirmVisible] = useState(false);
+  const [wishlistToDelete, setWishlistToDelete] = useState(null);
 
   const loadData = useCallback(async () => {
     const allWishlists = await getWishlists();
@@ -127,25 +132,26 @@ export default function WishlistsScreen() {
   };
 
   const handleDeleteWishlist = (wishlistId, customerName) => {
-    Alert.alert(
-      "Delete Wishlist",
-      `Delete wishlist for "${customerName}"?`,
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Delete",
-          style: "destructive",
-          onPress: async () => {
-            try {
-              await deleteWishlist(wishlistId);
-              loadData();
-            } catch (_error) {
-              Alert.alert("Error", "Failed to delete wishlist");
-            }
-          },
-        },
-      ]
-    );
+    setWishlistToDelete({ id: wishlistId, name: customerName });
+    setDeleteConfirmVisible(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!wishlistToDelete) return;
+    
+    try {
+      await deleteWishlist(wishlistToDelete.id);
+      setDeleteConfirmVisible(false);
+      setWishlistToDelete(null);
+      loadData();
+    } catch (_error) {
+      Alert.alert("Error", "Failed to delete wishlist");
+    }
+  };
+
+  const cancelDelete = () => {
+    setDeleteConfirmVisible(false);
+    setWishlistToDelete(null);
   };
 
   const getSelectedCategoryObjects = () => {
@@ -197,6 +203,7 @@ export default function WishlistsScreen() {
                 <View style={styles.wishlistHeader}>
                   <Text style={styles.wishlistCustomerName}>Customer: {wishlist.customerName}</Text>
                   <TouchableOpacity
+                    style={styles.deleteButton}
                     onPress={() =>
                       handleDeleteWishlist(wishlist.id, wishlist.customerName)
                     }
@@ -206,7 +213,7 @@ export default function WishlistsScreen() {
                       height={20}
                       viewBox="0 0 24 24"
                       fill="none"
-                      stroke="#d43a5c"
+                      stroke="#fff"
                       strokeWidth="2"
                     >
                       <Path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
@@ -225,7 +232,7 @@ export default function WishlistsScreen() {
                   {wishlist.images && wishlist.images.length > 0 && (
                     <View style={styles.wishlistImagesSection}>
                       <Text style={styles.wishlistImagesTitle}>
-                        Selected Images ({wishlist.images.length})
+                        Wishlist Images ({wishlist.images.length})
                       </Text>
                       <ScrollView
                         horizontal
@@ -445,6 +452,37 @@ export default function WishlistsScreen() {
         onClose={() => setSelectorVisible(false)}
       />
 
+      {/* Delete Confirmation Modal */}
+      <Modal
+        visible={deleteConfirmVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={cancelDelete}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.confirmModal}>
+            <Text style={styles.confirmTitle}>Delete Wishlist</Text>
+            <Text style={styles.confirmMessage}>
+              Are you sure you want to delete wishlist for &quot;{wishlistToDelete?.name}&quot;?
+            </Text>
+            <View style={styles.confirmButtons}>
+              <TouchableOpacity
+                style={[styles.confirmButton, styles.cancelButton]}
+                onPress={cancelDelete}
+              >
+                <Text style={styles.cancelButtonText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.confirmButton, styles.confirmDeleteButton]}
+                onPress={confirmDelete}
+              >
+                <Text style={styles.confirmDeleteButtonText}>Delete</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
       {/* Image Lightbox */}
       <ImageLightbox
         visible={lightboxVisible}
@@ -502,6 +540,12 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     marginBottom: Spacing.md,
+  },
+  deleteButton: {
+    backgroundColor: Colors.red,
+    padding: 8,
+    borderRadius: 6,
+    elevation: 2,
   },
 
   wishlistCustomerName: {
@@ -627,7 +671,60 @@ const styles = StyleSheet.create({
     padding: 2,
     backgroundColor: Colors.white,
   },
-
+  modalOverlay: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    padding: Spacing.lg,
+  },
+  confirmModal: {
+    backgroundColor: Colors.white,
+    borderRadius: 12,
+    padding: Spacing.xl,
+    width: "100%",
+    maxWidth: 400,
+    elevation: 5,
+  },
+  confirmTitle: {
+    fontSize: FontSizes.xlarge,
+    fontWeight: "bold",
+    color: Colors.text,
+    marginBottom: Spacing.md,
+    textAlign: "center",
+  },
+  confirmMessage: {
+    fontSize: FontSizes.medium,
+    color: Colors.text,
+    marginBottom: Spacing.xl,
+    textAlign: "center",
+    lineHeight: 22,
+  },
+  confirmButtons: {
+    flexDirection: "row",
+    gap: Spacing.md,
+  },
+  confirmButton: {
+    flex: 1,
+    paddingVertical: Spacing.md,
+    borderRadius: 8,
+    alignItems: "center",
+  },
+  cancelButton: {
+    backgroundColor: Colors.border,
+  },
+  cancelButtonText: {
+    color: Colors.white,
+    fontSize: FontSizes.medium,
+    fontWeight: "bold",
+  },
+  confirmDeleteButton: {
+    backgroundColor: Colors.red,
+  },
+  confirmDeleteButtonText: {
+    color: Colors.white,
+    fontSize: FontSizes.medium,
+    fontWeight: "bold",
+  },
   formTitle: {
     fontSize: FontSizes.large,
     fontWeight: "bold",
@@ -735,5 +832,5 @@ const styles = StyleSheet.create({
     fontSize: FontSizes.large,
     fontWeight: "bold",
   },
-  
 });
+
