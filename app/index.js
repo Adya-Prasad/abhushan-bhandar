@@ -8,7 +8,7 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  View,
+  View
 } from "react-native";
 import Svg, { Path } from "react-native-svg";
 import { Colors, Spacing } from "../constants/theme";
@@ -206,7 +206,7 @@ export default function HomeScreen() {
                   fill={Colors.primary}
                   strokeWidth="1"
                 >
-                  <Path d="M3 17v2h6v-2H3zM3 5v2h10V5H3zm10 16v-2h8v-2h-8v-2h-2v6h2zM7 9v2H3v2h4v2h2V9H7zm14 4v-2H11v2h10zm-6-4h2V7h4V5h-4V3h-2v6z" />
+                  <Path d="M19,4H5A3,3,0,0,0,2,7V17a3,3,0,0,0,3,3H19a3,3,0,0,0,3-3V7A3,3,0,0,0,19,4ZM5,18a1,1,0,0,1-1-1V14.58l3.3-3.29a1,1,0,0,1,1.4,0L15.41,18Zm15-1a1,1,0,0,1-1,1h-.77l-3.81-3.83.88-.88a1,1,0,0,1,1.4,0L20,16.58Zm0-3.24-1.88-1.87a3.06,3.06,0,0,0-4.24,0l-.88.88L10.12,9.89a3.06,3.06,0,0,0-4.24,0L4,11.76V7A1,1,0,0,1,5,6H19a1,1,0,0,1,1,1Z"/>
                 </Svg>
               </View>
               <Text style={[
@@ -233,7 +233,7 @@ export default function HomeScreen() {
                 fill={Colors.primary}
                 strokeWidth="1"
               >
-                <Path d="M3 17v2h6v-2H3zM3 5v2h10V5H3zm10 16v-2h8v-2h-8v-2h-2v6h2zM7 9v2H3v2h4v2h2V9H7zm14 4v-2H11v2h10zm-6-4h2V7h4V5h-4V3h-2v6z" />
+                <Path d="M10 3H4a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4a1 1 0 0 0-1-1zM9 9H5V5h4v4zm11 4h-6a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1v-6a1 1 0 0 0-1-1zm-1 6h-4v-4h4v4zM17 3c-2.206 0-4 1.794-4 4s1.794 4 4 4 4-1.794 4-4-1.794-4-4-4zm0 6c-1.103 0-2-.897-2-2s.897-2 2-2 2 .897 2 2-.897 2-2 2zM7 13c-2.206 0-4 1.794-4 4s1.794 4 4 4 4-1.794 4-4-1.794-4-4-4zm0 6c-1.103 0-2-.897-2-2s.897-2 2-2 2 .897 2 2-.897 2-2 2z"/>
               </Svg>
             </View>
             <Text style={[
@@ -241,6 +241,32 @@ export default function HomeScreen() {
               { fontSize: isMobile ? 13 : isTablet ? 17 : 21 }
             ]}>
               Manage Categories
+            </Text>
+          </Pressable>
+
+          <Pressable
+            style={[
+              styles.categoryItem,
+              { width: Math.max(categoryItemWidth, 120) }
+            ]}
+            onPress={() => router.push("/backup")}
+          >
+            <View style={styles.categoryImageContainer}>
+              <Svg
+                width={isMobile ? 50 : isTablet ? 60 : 80}
+                height={isMobile ? 50 : isTablet ? 60 : 80}
+                viewBox="0 0 24 24"
+                fill={Colors.primary}
+                strokeWidth="1"
+              >
+                <Path d="M8,5 L8,7 L5,7 L5,20 L19,20 L19,7 L16,7 L16,5 L19,5 C20.1046,5 21,5.89543 21,7 L21,20 C21,21.1046 20.1046,22 19,22 L5,22 C3.89543,22 3,21.1046 3,20 L3,7 C3,5.89543 3.89543,5 5,5 L8,5 Z M12,2 C12.5523,2 13,2.44772 13,3 L13,13.8284 L14.8284,12 C15.219,11.6094 15.8521,11.6094 16.2426,12 C16.6332,12.3905 16.6332,13.0237 16.2426,13.4142 L12.8839,16.7729 C12.3957,17.2611 11.6043,17.2611 11.1161,16.7729 L7.75736,13.4142 C7.36684,13.0237 7.36684,12.3905 7.75736,12 C8.14788,11.6094 8.78105,11.6094 9.17157,12 L11,13.8284 L11,3 C11,2.44772 11.4477,2 12,2 Z"/>
+              </Svg>
+            </View>
+            <Text style={[
+              styles.categoryTitle,
+              { fontSize: isMobile ? 13 : isTablet ? 17 : 21 }
+            ]}>
+              Backup & Restore
             </Text>
           </Pressable>
         </View>
