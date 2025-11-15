@@ -64,59 +64,29 @@ export default function BackupScreen() {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.content}>
-          <View style={styles.infoCard}>
-            <Svg
-              width={64}
-              height={64}
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke={Colors.primary}
-              strokeWidth="2"
-            >
-              <Path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3" />
-            </Svg>
-            <Text style={styles.infoTitle}>Download All Images</Text>
-            <Text style={styles.infoText}>
-              Save all your jewelry images and category icons to your device&apos;s gallery.
-              This ensures you won&apos;t lose your images if you reinstall the app.
-            </Text>
-          </View>
-
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>How It Works</Text>
-            <View style={styles.stepItem}>
-              <View style={styles.stepNumber}>
-                <Text style={styles.stepNumberText}>1</Text>
-              </View>
-              <Text style={styles.stepText}>
-                Tap the &quot;Download All Images&quot; button below
+            <Text style={styles.listitem}>
+                ⋄ Save all your jewelry images and category icons to your device&apos;s gallery.
+              This ensures you won&apos;t lose your images if you reinstall the app.
               </Text>
-            </View>
-            <View style={styles.stepItem}>
-              <View style={styles.stepNumber}>
-                <Text style={styles.stepNumberText}>2</Text>
-              </View>
-              <Text style={styles.stepText}>
-                Grant permission to save images to your device
+              <Text style={styles.listitem}>
+                ⋄ Tap the &quot;Download All Images&quot; button below.
               </Text>
-            </View>
-            <View style={styles.stepItem}>
-              <View style={styles.stepNumber}>
-                <Text style={styles.stepNumberText}>3</Text>
-              </View>
-              <Text style={styles.stepText}>
-                All images will be saved to your Photos/Gallery
+              <Text style={styles.listitem}>
+                ⋄ Grant permission to save images to your device
               </Text>
-            </View>
-            <View style={styles.stepItem}>
-              <View style={styles.stepNumber}>
-                <Text style={styles.stepNumberText}>4</Text>
-              </View>
-              <Text style={styles.stepText}>
-                After reinstalling, you can re-add images from your gallery
+              <Text style={styles.listitem}>
+                ⋄ All images will be saved to your Photos/Gallery
               </Text>
-            </View>
+              <Text style={styles.listitem}>
+                ⋄ After reinstalling, you can re-add images from your gallery
+              </Text>
+              <Text style={styles.listitem}>
+                ⋄ Download periodically to keep your images safe
+              </Text>
+              <Text style={styles.listitem}>
+                ⋄ You can also backup images to cloud storage (Google Photos, iCloud)
+              </Text>
           </View>
 
           <TouchableOpacity
@@ -138,35 +108,6 @@ export default function BackupScreen() {
               {loading ? "Downloading..." : "Download All Images"}
             </Text>
           </TouchableOpacity>
-
-          <View style={styles.tipsCard}>
-            <Text style={styles.tipsTitle}>💡 Important Notes</Text>
-            <View style={styles.tipItem}>
-              <Text style={styles.tipBullet}>•</Text>
-              <Text style={styles.tipText}>
-                Images will be saved to your device&apos;s Photos/Gallery app
-              </Text>
-            </View>
-            <View style={styles.tipItem}>
-              <Text style={styles.tipBullet}>•</Text>
-              <Text style={styles.tipText}>
-                Make sure you have enough storage space on your device
-              </Text>
-            </View>
-            <View style={styles.tipItem}>
-              <Text style={styles.tipBullet}>•</Text>
-              <Text style={styles.tipText}>
-                Download regularly to keep your images safe
-              </Text>
-            </View>
-            <View style={styles.tipItem}>
-              <Text style={styles.tipBullet}>•</Text>
-              <Text style={styles.tipText}>
-                You can also backup images to cloud storage (Google Photos, iCloud)
-              </Text>
-            </View>
-          </View>
-        </View>
       </ScrollView>
     </View>
   );
@@ -184,6 +125,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.lg,
     paddingTop: 50,
     paddingBottom: Spacing.lg,
+    
   },
   backButton: {
     padding: 8,
@@ -201,66 +143,18 @@ const styles = StyleSheet.create({
   scrollContent: {
     padding: Spacing.lg,
   },
-  content: {
-    maxWidth: 600,
-    alignSelf: "center",
-    width: "100%",
-  },
-  infoCard: {
-    backgroundColor: Colors.white,
-    borderRadius: 12,
-    padding: Spacing.xl,
-    alignItems: "center",
-    marginBottom: Spacing.xl,
-    elevation: 2,
-  },
-  infoTitle: {
-    fontSize: FontSizes.xlarge,
-    fontWeight: "bold",
-    color: Colors.text,
-    marginTop: Spacing.md,
-    marginBottom: Spacing.sm,
-  },
-  infoText: {
-    fontSize: FontSizes.medium,
-    color: Colors.text,
-    textAlign: "center",
-    lineHeight: 22,
-  },
   section: {
     marginBottom: Spacing.xl,
+    backgroundColor: Colors.white,
+    padding: Spacing.md,
+    borderRadius: 6,
   },
-  sectionTitle: {
-    fontSize: FontSizes.large,
-    fontWeight: "bold",
-    color: Colors.text,
-    marginBottom: Spacing.md,
-  },
-  stepItem: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    marginBottom: Spacing.md,
-  },
-  stepNumber: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: Colors.primary,
-    alignItems: "center",
-    justifyContent: "center",
-    marginRight: Spacing.md,
-  },
-  stepNumberText: {
-    color: Colors.white,
-    fontSize: FontSizes.medium,
-    fontWeight: "bold",
-  },
-  stepText: {
+
+  listitem: {
     flex: 1,
     fontSize: FontSizes.medium,
     color: Colors.text,
-    lineHeight: 22,
-    paddingTop: 4,
+    lineHeight: 30,
   },
   downloadButton: {
     flexDirection: "row",
@@ -273,6 +167,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.primary,
     elevation: 3,
     marginBottom: Spacing.xl,
+    
   },
   buttonDisabled: {
     opacity: 0.6,
@@ -281,32 +176,5 @@ const styles = StyleSheet.create({
     color: Colors.white,
     fontSize: FontSizes.large,
     fontWeight: "bold",
-  },
-  tipsCard: {
-    backgroundColor: "#fff3cd",
-    borderRadius: 12,
-    padding: Spacing.lg,
-  },
-  tipsTitle: {
-    fontSize: FontSizes.large,
-    fontWeight: "bold",
-    color: Colors.text,
-    marginBottom: Spacing.md,
-  },
-  tipItem: {
-    flexDirection: "row",
-    marginBottom: Spacing.sm,
-  },
-  tipBullet: {
-    fontSize: FontSizes.medium,
-    color: Colors.text,
-    marginRight: Spacing.sm,
-    fontWeight: "bold",
-  },
-  tipText: {
-    flex: 1,
-    fontSize: FontSizes.medium,
-    color: Colors.text,
-    lineHeight: 22,
   },
 });
