@@ -66,26 +66,26 @@ export default function BackupScreen() {
       >
           <View style={styles.section}>
             <Text style={styles.listitem}>
-                ⋄ Save all your jewelry images and category icons to your device&apos;s gallery.
+                ◉ Save all your jewellery images and category icons to your device&apos;s gallery.
               This ensures you won&apos;t lose your images if you reinstall the app.
               </Text>
               <Text style={styles.listitem}>
-                ⋄ Tap the &quot;Download All Images&quot; button below.
+                ◉ Tap the &quot;Download All Images&quot; button below.
               </Text>
               <Text style={styles.listitem}>
-                ⋄ Grant permission to save images to your device
+                ◉ Grant permission to save images to your device
               </Text>
               <Text style={styles.listitem}>
-                ⋄ All images will be saved to your Photos/Gallery
+                ◉ All images will be saved to your Photos/Gallery
               </Text>
               <Text style={styles.listitem}>
-                ⋄ After reinstalling, you can re-add images from your gallery
+                ◉ After reinstalling, you can re-add images from your gallery
               </Text>
               <Text style={styles.listitem}>
-                ⋄ Download periodically to keep your images safe
+                ◉ Download periodically to keep your images safe
               </Text>
               <Text style={styles.listitem}>
-                ⋄ You can also backup images to cloud storage (Google Photos, iCloud)
+                ◉ You can also backup images to cloud storage (Google Photos, iCloud)
               </Text>
           </View>
 
@@ -145,16 +145,13 @@ const styles = StyleSheet.create({
   },
   section: {
     marginBottom: Spacing.xl,
-    backgroundColor: Colors.white,
-    padding: Spacing.md,
-    borderRadius: 6,
   },
 
   listitem: {
     flex: 1,
     fontSize: FontSizes.medium,
     color: Colors.text,
-    lineHeight: 30,
+    marginBottom: Spacing.sm
   },
   downloadButton: {
     flexDirection: "row",

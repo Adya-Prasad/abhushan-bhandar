@@ -15,7 +15,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { GestureHandlerRootView, PanGestureHandler, PinchGestureHandler, State } from "react-native-gesture-handler";
+import { Gesture, GestureDetector, GestureHandlerRootView } from "react-native-gesture-handler";
 import Svg, { Path } from "react-native-svg";
 import { Colors, FontSizes, Spacing } from "../../constants/theme";
 import {
@@ -70,8 +70,6 @@ export default function CategoryScreen() {
   const translateY = useRef(new Animated.Value(0)).current;
   const lastScale = useRef(1);
   const lastTranslate = useRef({ x: 0, y: 0 });
-  const pinchRef = useRef(null);
-  const panRef = useRef(null);
 
   const loadJewellery = useCallback(async () => {
     try {
@@ -131,18 +129,15 @@ export default function CategoryScreen() {
     resetZoom();
   };
 
-  const onPinchGestureEvent = (event) => {
-    const pinchScale = event.nativeEvent.scale;
-    const newScale = lastScale.current * pinchScale;
-    // Limit zoom between 1x and 4x
-    const clampedScale = Math.max(1, Math.min(4, newScale));
-    scale.setValue(clampedScale);
-  };
-
-  const onPinchHandlerStateChange = (event) => {
-    if (event.nativeEvent.oldState === State.ACTIVE) {
-      let newScale = lastScale.current * event.nativeEvent.scale;
-      // Limit zoom between 1x and 4x
+  // Pinch gesture for zooming
+  const pinchGesture = Gesture.Pinch()
+    .onUpdate((event) => {
+      const newScale = lastScale.current * event.scale;
+      const clampedScale = Math.max(1, Math.min(4, newScale));
+      scale.setValue(clampedScale);
+    })
+    .onEnd((event) => {
+      let newScale = lastScale.current * event.scale;
       if (newScale < 1) {
         newScale = 1;
       } else if (newScale > 4) {
@@ -150,32 +145,29 @@ export default function CategoryScreen() {
       }
       lastScale.current = newScale;
       scale.setValue(newScale);
-    }
-  };
+    });
 
-  const onPanGestureEvent = (event) => {
-    // Only allow panning when zoomed in
-    if (lastScale.current > 1) {
-      const newX = lastTranslate.current.x + event.nativeEvent.translationX;
-      const newY = lastTranslate.current.y + event.nativeEvent.translationY;
-      
-      // Apply constraints to prevent panning too far
-      const maxTranslate = (lastScale.current - 1) * 150;
-      const clampedX = Math.max(-maxTranslate, Math.min(maxTranslate, newX));
-      const clampedY = Math.max(-maxTranslate, Math.min(maxTranslate, newY));
-      
-      translateX.setValue(clampedX);
-      translateY.setValue(clampedY);
-    }
-  };
-
-  const onPanHandlerStateChange = (event) => {
-    if (event.nativeEvent.oldState === State.ACTIVE) {
+  // Pan gesture for moving image when zoomed
+  const panGesture = Gesture.Pan()
+    .enabled(lastScale.current > 1)
+    .onUpdate((event) => {
       if (lastScale.current > 1) {
-        const newX = lastTranslate.current.x + event.nativeEvent.translationX;
-        const newY = lastTranslate.current.y + event.nativeEvent.translationY;
+        const newX = lastTranslate.current.x + event.translationX;
+        const newY = lastTranslate.current.y + event.translationY;
         
-        // Apply constraints
+        const maxTranslate = (lastScale.current - 1) * 150;
+        const clampedX = Math.max(-maxTranslate, Math.min(maxTranslate, newX));
+        const clampedY = Math.max(-maxTranslate, Math.min(maxTranslate, newY));
+        
+        translateX.setValue(clampedX);
+        translateY.setValue(clampedY);
+      }
+    })
+    .onEnd((event) => {
+      if (lastScale.current > 1) {
+        const newX = lastTranslate.current.x + event.translationX;
+        const newY = lastTranslate.current.y + event.translationY;
+        
         const maxTranslate = (lastScale.current - 1) * 150;
         lastTranslate.current = {
           x: Math.max(-maxTranslate, Math.min(maxTranslate, newX)),
@@ -185,13 +177,14 @@ export default function CategoryScreen() {
         translateX.setValue(lastTranslate.current.x);
         translateY.setValue(lastTranslate.current.y);
       } else {
-        // Reset translation when not zoomed
         lastTranslate.current = { x: 0, y: 0 };
         translateX.setValue(0);
         translateY.setValue(0);
       }
-    }
-  };
+    });
+
+  // Combine gestures
+  const composedGesture = Gesture.Simultaneous(pinchGesture, panGesture);
 
   const handleDoubleTap = () => {
     if (lastScale.current > 1) {
@@ -407,56 +400,40 @@ export default function CategoryScreen() {
                 </TouchableOpacity>
                 <View style={styles.lightboxContent}>
                   <View style={styles.lightboxImageWrap}>
-                    <PinchGestureHandler
-                      ref={pinchRef}
-                      onGestureEvent={onPinchGestureEvent}
-                      onHandlerStateChange={onPinchHandlerStateChange}
-                    >
-                      <Animated.View style={{ flex: 1 }}>
-                        <PanGestureHandler
-                          ref={panRef}
-                          onGestureEvent={onPanGestureEvent}
-                          onHandlerStateChange={onPanHandlerStateChange}
-                          minPointers={1}
-                          maxPointers={1}
-                          simultaneousHandlers={pinchRef}
-                          enabled={lastScale.current > 1}
-                        >
-                          <Animated.View
-                            style={[
-                              styles.lightboxScrollView,
-                              {
-                                transform: [
-                                  { scale: scale },
-                                  { translateX: translateX },
-                                  { translateY: translateY },
-                                ],
-                              },
-                            ]}
+                    <GestureDetector gesture={composedGesture}>
+                      <Animated.View
+                        style={[
+                          styles.lightboxScrollView,
+                          {
+                            transform: [
+                              { scale: scale },
+                              { translateX: translateX },
+                              { translateY: translateY },
+                            ],
+                          },
+                        ]}
+                      >
+                        {jewelleryItems[lightboxIndex] ? (
+                          <Pressable 
+                            onPress={handleDoubleTap} 
+                            delayLongPress={200}
+                            style={{ width: "100%", height: "100%", alignItems: "center", justifyContent: "center" }}
                           >
-                            {jewelleryItems[lightboxIndex] ? (
-                              <Pressable 
-                                onPress={handleDoubleTap} 
-                                delayLongPress={200}
-                                style={{ width: "100%", height: "100%", alignItems: "center", justifyContent: "center" }}
-                              >
-                                <Image
-                                  key={`lightbox-img-${lightboxIndex}-${jewelleryItems[lightboxIndex].imgId || ""
-                                    }`}
-                                  source={{ uri: jewelleryItems[lightboxIndex].image }}
-                                  style={styles.lightboxImage}
-                                  resizeMode="contain"
-                                />
-                              </Pressable>
-                            ) : (
-                              <Text style={{ color: Colors.white }}>
-                                No image to display
-                              </Text>
-                            )}
-                          </Animated.View>
-                        </PanGestureHandler>
+                            <Image
+                              key={`lightbox-img-${lightboxIndex}-${jewelleryItems[lightboxIndex].imgId || ""
+                                }`}
+                              source={{ uri: jewelleryItems[lightboxIndex].image }}
+                              style={styles.lightboxImage}
+                              resizeMode="contain"
+                            />
+                          </Pressable>
+                        ) : (
+                          <Text style={{ color: Colors.white }}>
+                            No image to display
+                          </Text>
+                        )}
                       </Animated.View>
-                    </PinchGestureHandler>
+                    </GestureDetector>
                   </View>
                 <View style={styles.lightboxDetailsRow}>
                   <Pressable onPress={showPrev} style={styles.detailsNavButton}>
@@ -511,7 +488,7 @@ export default function CategoryScreen() {
         <View style={styles.editPopupOverlay}>
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Edit Jewellery</Text>
+              <Text>Edit Jewellery</Text>
               <Pressable onPress={closeEditModal} style={styles.closeButton}>
                 <Svg
                   width={24}
@@ -682,7 +659,7 @@ const styles = StyleSheet.create({
     paddingVertical: 100,
   },
   emptyText: {
-    fontSize: FontSizes.large,
+    fontSize: FontSizes.medium,
     color: Colors.text,
     marginBottom: 8,
     textAlign: "center",
@@ -734,7 +711,7 @@ const styles = StyleSheet.create({
   },
   editPopupOverlay: {
     flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    backgroundColor: "#0f0600e1",
     justifyContent: "center",
     alignItems: "center",
     padding: Spacing.lg,
@@ -742,7 +719,7 @@ const styles = StyleSheet.create({
   /* Lightbox styles */
   lightboxOverlay: {
     flex: 1,
-    backgroundColor: "#160800e1",
+    backgroundColor: "#0f0600e1",
     justifyContent: "center",
     alignItems: "center",
   },
@@ -763,11 +740,8 @@ const styles = StyleSheet.create({
   },
   lightboxImageWrap: {
     flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
     width: "100%",
     position: "relative",
-    overflow: "hidden",
   },
   lightboxScroll: {
     alignItems: "center",
@@ -782,19 +756,19 @@ const styles = StyleSheet.create({
   },
   lightboxImage: {
     width: Dimensions.get("window").width,
-    height: Dimensions.get("window").height * 0.7,
+    height: Dimensions.get("window").height * 0.5,
   },
   lightboxDetails: {
     width: isMobileInitial ? "100%" : "35%",
-    padding: Spacing.lg,
-    backgroundColor: "transparent",
+    padding: Spacing.sm,
+    backgroundColor: Colors.red,
   },
   lightboxDetailsRow: {
     width: '100%',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginTop: Spacing.md,
+    marginTop: Spacing.xs,
   },
   detailsNavButton: {
     padding: 8,
@@ -805,6 +779,7 @@ const styles = StyleSheet.create({
   lightboxDetailsCenter: {
     flex: 1,
     alignItems: 'center',
+    backgroundColor: "transparent"
   },
   lightboxDetailChips: {
     flexDirection: 'row',
@@ -850,7 +825,7 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.sm,
   },
   modalContent: {
-    backgroundColor: Colors.white,
+    backgroundColor: Colors.background,
     borderRadius: 12,
     width: "95%",
     maxWidth: 700,
@@ -862,9 +837,6 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     padding: Spacing.lg,
-  },
-  modalTitle: {
-    fontSize: FontSizes.xlarge,
     fontWeight: "bold",
     color: Colors.text,
   },
@@ -881,13 +853,13 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.lg,
   },
   modalLabel: {
-    fontSize: FontSizes.medium,
+    fontSize: FontSizes.small,
     fontWeight: "600",
     color: Colors.text,
     marginBottom: Spacing.sm,
   },
   required: {
-    color: "#e74c3c",
+    color: Colors.red,
   },
   modalInput: {
     borderRadius: 8,
@@ -897,7 +869,7 @@ const styles = StyleSheet.create({
     color: Colors.text,
     backgroundColor: Colors.white,
     borderWidth: 2,
-    borderColor: Colors.secondary,
+    borderColor: Colors.border,
   },
   modalFooter: {
     flexDirection: "row",
@@ -912,10 +884,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
-    backgroundColor: "#e74c3c",
-    paddingVertical: Spacing.md,
+    backgroundColor: Colors.red,
+    paddingVertical: Spacing.sm,
     borderRadius: 8,
-    elevation: 2,
   },
   deleteModalButtonText: {
     color: Colors.white,
@@ -925,10 +896,9 @@ const styles = StyleSheet.create({
   updateButton: {
     flex: 1,
     backgroundColor: Colors.primary,
-    paddingVertical: Spacing.md,
+    paddingVertical: Spacing.sm,
     borderRadius: 8,
     alignItems: "center",
-    elevation: 2,
   },
   updateButtonText: {
     color: Colors.white,
@@ -941,9 +911,9 @@ const styles = StyleSheet.create({
   },
   deleteConfirmText: {
     fontSize: FontSizes.medium,
-    color: Colors.text,
+    color: Colors.red,
     textAlign: "center",
-    fontWeight: "600",
+    fontWeight: "700",
   },
   deleteConfirmButtons: {
     flexDirection: "row",
@@ -951,8 +921,8 @@ const styles = StyleSheet.create({
   },
   cancelButton: {
     flex: 1,
-    backgroundColor: Colors.border,
-    paddingVertical: Spacing.md,
+    backgroundColor: Colors.primary,
+    paddingVertical: Spacing.sm,
     borderRadius: 8,
     alignItems: "center",
   },
@@ -963,10 +933,11 @@ const styles = StyleSheet.create({
   },
   confirmDeleteButton: {
     flex: 1,
-    backgroundColor: "#e74c3c",
-    paddingVertical: Spacing.md,
+    backgroundColor: Colors.red,
+    paddingVertical: Spacing.sm,
     borderRadius: 8,
     alignItems: "center",
+    
   },
   confirmDeleteButtonText: {
     color: Colors.white,

@@ -3,21 +3,25 @@ import { router } from "expo-router";
 import { useCallback, useState } from "react";
 import {
   Alert,
+  Image,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
-  View,
+  View
 } from "react-native";
 import Svg, { Path } from "react-native-svg";
+import CategoryCard from "../components/CategoryCard";
+import ImageLightbox from "../components/ImageLightbox";
+import ImageSelector from "../components/ImageSelector";
 import { Colors, FontSizes, Spacing } from "../constants/theme";
 import {
   deleteWishlist,
   getAllCategories,
   getWishlists,
-  saveWishlist,
+  saveWishlist
 } from "../utils/database";
 
 export default function WishlistsScreen() {
@@ -28,7 +32,16 @@ export default function WishlistsScreen() {
   const [customerName, setCustomerName] = useState("");
   const [selectedCategories, setSelectedCategories] = useState([]);
   const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
-  const [jewelleryIds, setJewelleryIds] = useState("");
+  const [selectedImages, setSelectedImages] = useState([]);
+  
+  // Image selector state
+  const [selectorVisible, setSelectorVisible] = useState(false);
+  const [selectorCategory, setSelectorCategory] = useState("");
+  
+  // Lightbox state
+  const [lightboxVisible, setLightboxVisible] = useState(false);
+  const [lightboxImages, setLightboxImages] = useState([]);
+  const [lightboxIndex, setLightboxIndex] = useState(0);
 
   const loadData = useCallback(async () => {
     const allWishlists = await getWishlists();
@@ -56,26 +69,61 @@ export default function WishlistsScreen() {
       Alert.alert("Error", "Please enter customer name");
       return;
     }
-    if (selectedCategories.length === 0) {
-      Alert.alert("Error", "Please select at least one category");
+    if (selectedImages.length === 0) {
+      Alert.alert("Error", "Please select at least one image");
       return;
     }
 
     try {
+      const imageIds = selectedImages.map((img) => img.imgId || img.id).join(", ");
+      const categories = [...new Set(selectedImages.map((img) => {
+        // Get category from the image's categories array
+        return img.categories ? img.categories[0] : "Archive";
+      }))];
+
       await saveWishlist({
         customerName: customerName.trim(),
-        categories: selectedCategories,
-        jewelleryIds: jewelleryIds.trim(),
+        categories: categories,
+        jewelleryIds: imageIds,
+        images: selectedImages.map((img) => ({
+          id: img.id,
+          imgId: img.imgId,
+          name: img.name,
+          image: img.image,
+          metal: img.metal,
+          weight: img.weight,
+          carat: img.carat,
+        })),
       });
       Alert.alert("Success", "Wishlist created successfully!");
       setCustomerName("");
       setSelectedCategories([]);
-      setJewelleryIds("");
+      setSelectedImages([]);
       setShowCategoryDropdown(false);
       loadData();
     } catch (_error) {
       Alert.alert("Error", "Failed to create wishlist");
     }
+  };
+
+  const openImageSelector = (categoryName) => {
+    setSelectorCategory(categoryName);
+    setSelectorVisible(true);
+  };
+
+  const handleImageSelect = (image) => {
+    setSelectedImages((prev) => {
+      const exists = prev.find((img) => img.id === image.id);
+      if (exists) {
+        return prev.filter((img) => img.id !== image.id);
+      } else {
+        return [...prev, image];
+      }
+    });
+  };
+
+  const removeSelectedImage = (imageId) => {
+    setSelectedImages((prev) => prev.filter((img) => img.id !== imageId));
   };
 
   const handleDeleteWishlist = (wishlistId, customerName) => {
@@ -98,6 +146,10 @@ export default function WishlistsScreen() {
         },
       ]
     );
+  };
+
+  const getSelectedCategoryObjects = () => {
+    return categories.filter((cat) => selectedCategories.includes(cat.name));
   };
 
   return (
@@ -162,16 +214,55 @@ export default function WishlistsScreen() {
                   </TouchableOpacity>
                 </View>
                 <View style={styles.wishlistBody}>
+                  <View style={styles.categoriesRow}>
                     {wishlist.categories.map((cat, idx) => (
-                      <View key={idx}>
-                        <Text style={styles.wishlistText}>Category: {cat}</Text>
+                      <View key={idx} style={styles.categoryBadge}>
+                        <Text style={styles.categoryBadgeText}>{cat}</Text>
                       </View>
                     ))}
-                  {wishlist.jewelleryIds && (
-                    <>
-                      <Text style={styles.wishlistText}>Jewellery IDs: {wishlist.jewelleryIds}
+                  </View>
+                  
+                  {wishlist.images && wishlist.images.length > 0 && (
+                    <View style={styles.wishlistImagesSection}>
+                      <Text style={styles.wishlistImagesTitle}>
+                        Selected Images ({wishlist.images.length})
                       </Text>
-                    </>
+                      <ScrollView
+                        horizontal
+                        showsHorizontalScrollIndicator={false}
+                        style={styles.wishlistImagesScroll}
+                      >
+                        {wishlist.images.map((img, idx) => (
+                          <Pressable
+                            key={idx}
+                            style={styles.wishlistImageCard}
+                            onPress={() => {
+                              setLightboxImages(wishlist.images);
+                              setLightboxIndex(idx);
+                              setLightboxVisible(true);
+                            }}
+                          >
+                            <Image
+                              source={{ uri: img.image }}
+                              style={styles.wishlistImageThumb}
+                            />
+                            <View style={styles.wishlistImageOverlay}>
+                              <Svg width={24} height={24} viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2">
+                                <Path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                                <Path d="M12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6z" />
+                              </Svg>
+                            </View>
+                            {img.imgId && (
+                              <Text style={styles.wishlistImageId}>ID: {img.imgId}</Text>
+                            )}
+                          </Pressable>
+                        ))}
+                      </ScrollView>
+                    </View>
+                  )}
+                  
+                  {wishlist.jewelleryIds && (
+                    <Text style={styles.wishlistText}>IDs: {wishlist.jewelleryIds}</Text>
                   )}
                   <Text style={styles.wishlistDate}>
                     Created: {new Date(wishlist.createdAt).toLocaleDateString()}
@@ -231,26 +322,78 @@ export default function WishlistsScreen() {
                 </Svg>
               </Pressable>
               {selectedCategories.length > 0 && (
-                <View style={styles.selectedCategoriesContainer}>
-                  {selectedCategories.map((cat, index) => (
-                    <View key={index} style={styles.selectedCategoryChip}>
-                      <Text style={styles.selectedCategoryText}>{cat}</Text>
-                      <Pressable onPress={() => toggleCategory(cat)}>
-                        <Svg
-                          width={16}
-                          height={16}
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke={Colors.white}
-                          strokeWidth="2"
-                        >
+                <>
+                  <View style={styles.selectedCategoriesContainer}>
+                    {selectedCategories.map((cat, index) => (
+                      <View key={index} style={styles.selectedCategoryChip}>
+                        <Text style={styles.selectedCategoryText}>{cat}</Text>
+                        <Pressable onPress={() => toggleCategory(cat)}>
+                          <Svg
+                            width={16}
+                            height={16}
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke={Colors.white}
+                            strokeWidth="2"
+                          >
+                            <Path d="M18 6L6 18M6 6l12 12" />
+                          </Svg>
+                        </Pressable>
+                      </View>
+                    ))}
+                  </View>
+                  <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    style={styles.categoryCardsScroll}
+                  >
+                    {getSelectedCategoryObjects().map((cat, index) => (
+                      <CategoryCard
+                        key={index}
+                        category={cat}
+                        width={120}
+                        onPress={() => openImageSelector(cat.name)}
+                      />
+                    ))}
+                  </ScrollView>
+                </>
+              )}
+            </View>
+
+            {selectedImages.length > 0 && (
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>Selected Images ({selectedImages.length})</Text>
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  style={styles.selectedImagesScroll}
+                >
+                  {selectedImages.map((img) => (
+                    <View key={img.id} style={styles.selectedImageCard}>
+                      <Image source={{ uri: img.image }} style={styles.selectedImageThumb} />
+                      <Pressable
+                        style={styles.removeImageButton}
+                        onPress={() => removeSelectedImage(img.id)}
+                      >
+                        <Svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2">
                           <Path d="M18 6L6 18M6 6l12 12" />
                         </Svg>
                       </Pressable>
+                      <Text style={styles.selectedImageId}>ID: {img.imgId || img.id}</Text>
                     </View>
                   ))}
-                </View>
-              )}
+                </ScrollView>
+              </View>
+            )}
+
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Jewellery IDs (Auto-filled)</Text>
+              <TextInput
+                style={[styles.input, styles.inputDisabled]}
+                value={selectedImages.map((img) => img.imgId || img.id).join(", ")}
+                editable={false}
+                placeholderTextColor={Colors.border}
+              />
               {showCategoryDropdown && (
                 <ScrollView
                   style={styles.dropdownList}
@@ -281,16 +424,7 @@ export default function WishlistsScreen() {
               )}
             </View>
 
-            <View style={styles.inputGroup}>
-              <Text style={styles.label}>Jewellery IDs (Optional)</Text>
-              <TextInput
-                style={styles.input}
-                placeholder="e.g., 001, 002, 003"
-                value={jewelleryIds}
-                onChangeText={setJewelleryIds}
-                placeholderTextColor={Colors.border}
-              />
-            </View>
+
 
             <TouchableOpacity
               style={styles.submitButton}
@@ -301,6 +435,23 @@ export default function WishlistsScreen() {
           </View>
         </View>
       </ScrollView>
+
+      {/* Image Selector Modal */}
+      <ImageSelector
+        visible={selectorVisible}
+        categoryName={selectorCategory}
+        selectedImages={selectedImages}
+        onSelect={handleImageSelect}
+        onClose={() => setSelectorVisible(false)}
+      />
+
+      {/* Image Lightbox */}
+      <ImageLightbox
+        visible={lightboxVisible}
+        images={lightboxImages}
+        initialIndex={lightboxIndex}
+        onClose={() => setLightboxVisible(false)}
+      />
     </View>
   );
 }
@@ -350,8 +501,9 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: Spacing.xs,
+    marginBottom: Spacing.md,
   },
+
   wishlistCustomerName: {
     fontSize: FontSizes.large,
     fontWeight: "700",
@@ -366,12 +518,114 @@ const styles = StyleSheet.create({
     paddingBottom: Spacing.sm,
   },
   wishlistBody: {
+    gap: Spacing.sm,
+  },
+  categoriesRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
     gap: Spacing.xs,
+  },
+  categoryBadge: {
+    backgroundColor: Colors.primary,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: 6,
+    borderRadius: 16,
+  },
+  categoryBadgeText: {
+    color: Colors.white,
+    fontSize: FontSizes.small,
+    fontWeight: "600",
+  },
+  categoryCardsScroll: {
+    marginTop: Spacing.md,
+    marginBottom: Spacing.md,
+  },
+  selectedImagesScroll: {
+    marginTop: Spacing.sm,
+  },
+  selectedImageCard: {
+    width: 100,
+    marginRight: Spacing.sm,
+    backgroundColor: Colors.white,
+    borderRadius: 8,
+    overflow: "hidden",
+    borderWidth: 2,
+    borderColor: Colors.primary,
+  },
+  selectedImageThumb: {
+    width: "100%",
+    aspectRatio: 1,
+    resizeMode: "cover",
+  },
+  removeImageButton: {
+    position: "absolute",
+    top: 4,
+    right: 4,
+    backgroundColor: Colors.red,
+    borderRadius: 12,
+    padding: 4,
+  },
+  selectedImageId: {
+    fontSize: FontSizes.small,
+    color: Colors.primary,
+    fontWeight: "bold",
+    textAlign: "center",
+    padding: 4,
+  },
+  inputDisabled: {
+    backgroundColor: Colors.secondary,
+    color: Colors.text,
   },
   wishlistDate: {
     fontSize: FontSizes.small,
     color: Colors.text,
     fontStyle: "italic",
+  },
+  wishlistImagesSection: {
+    marginTop: Spacing.sm,
+    marginBottom: Spacing.sm,
+  },
+  wishlistImagesTitle: {
+    fontSize: FontSizes.small,
+    fontWeight: "700",
+    color: Colors.text,
+    marginBottom: Spacing.xs,
+  },
+  wishlistImagesScroll: {
+    marginTop: Spacing.xs,
+  },
+  wishlistImageCard: {
+    width: 80,
+    marginRight: Spacing.sm,
+    backgroundColor: Colors.white,
+    borderRadius: 8,
+    overflow: "hidden",
+    borderWidth: 2,
+    borderColor: Colors.secondary,
+    position: "relative",
+  },
+  wishlistImageThumb: {
+    width: "100%",
+    aspectRatio: 1,
+    resizeMode: "cover",
+  },
+  wishlistImageOverlay: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: "rgba(0, 0, 0, 0.4)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  wishlistImageId: {
+    fontSize: 10,
+    color: Colors.primary,
+    fontWeight: "bold",
+    textAlign: "center",
+    padding: 2,
+    backgroundColor: Colors.white,
   },
 
   formTitle: {

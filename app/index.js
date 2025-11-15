@@ -145,11 +145,11 @@ export default function HomeScreen() {
         <Text style={[
           styles.title,
           {
-            fontSize: isMobile ? 20 : isTablet ? 28 : 35,
-            marginBottom: isMobile ? 20 : 30,
+            fontSize: isMobile ? 17 : isTablet ? 28 : 35,
+            marginBottom: isMobile ? 18 : 30,
           }
         ]}>
-          Explore Our Elegant Collection
+          Explore Elegant Jewelleries Collection
         </Text>
 
         {/* Categories Grid */}
